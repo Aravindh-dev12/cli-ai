@@ -136,10 +136,36 @@ class ClinevoOne(nn.Module):
         projected = self.fusion_gate(fused)
         return torch.tanh(self.state_proj(torch.sigmoid(projected) * projected))
 
+    def _pair(self, state: Tensor, question_ids: Tensor) -> Tensor:
+        question = self.question(question_ids)
+        return torch.cat([state, question], dim=-1)
+
+    def predict_many(
+        self,
+        text_ids: Tensor,
+        questions: list[tuple[str, str, int]],
+        audio_waveform: Tensor | None = None,
+        accel: Tensor | None = None,
+    ) -> list[tuple[str, dict[str, Tensor]]]:
+        """Evaluate all typed questions for one state with one shared state encode."""
+        state = self.encode_state(text_ids, audio_waveform, accel)
+        outputs: list[tuple[str, dict[str, Tensor]]] = []
+        for name, question_type, choice_count in questions:
+            pair = self._pair(state, text_to_ids(name))
+            if question_type == 'noul':
+                outputs.append((name, {'noul_logit': self.noul_head(pair).squeeze(-1)}))
+            elif question_type == 'score':
+                outputs.append((name, {'score_logits': self.score_head(pair)}))
+            elif question_type == 'choice':
+                logits = self.choice_head(pair)
+                outputs.append((name, {'choice_logits': logits[:choice_count] if choice_count else logits}))
+            else:
+                raise ValueError(f'Unsupported decision type: {question_type}')
+        return outputs
+
     def forward(self, text_ids: Tensor, question_ids: Tensor, question_type: str, choice_count: int = 0, audio_waveform: Tensor | None = None, accel: Tensor | None = None):
         state = self.encode_state(text_ids, audio_waveform, accel)
-        question = self.question(question_ids)
-        pair = torch.cat([state, question], dim=-1)
+        pair = self._pair(state, question_ids)
         if question_type == 'noul':
             return {'noul_logit': self.noul_head(pair).squeeze(-1)}
         if question_type == 'score':
