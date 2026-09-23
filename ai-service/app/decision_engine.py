@@ -61,6 +61,16 @@ INBOX_DECISION_QUESTIONS: dict[str, dict[str, Any]] = {
             "false": "No regulated interpretation is required and an explicit local policy permits autonomous handling.",
         },
     },
+    "agent_action": {
+        "type": "choice",
+        "instructions": "What bounded agent action is appropriate for this item before human review?",
+        "criteria": {
+            "enrich": "Collect or normalize additional non-terminal evidence before review.",
+            "review": "Place the item in the normal human review workstream.",
+            "escalate": "Prioritize human review because the evidence indicates elevated risk or urgency.",
+            "hold": "Do not take another automated action; preserve the item for controlled review."
+        },
+    },
     "route": {
         "type": "choice",
         "instructions": "Which operational workstream should own this item first?",
@@ -72,6 +82,22 @@ INBOX_DECISION_QUESTIONS: dict[str, dict[str, Any]] = {
         },
     },
 }
+
+
+class FrontierProvider:
+    name = "frontier"
+
+    def __init__(self):
+        self._provider = None
+
+    def _get(self):
+        if self._provider is None:
+            from .frontier_model import FrontierModelProvider
+            self._provider = FrontierModelProvider()
+        return self._provider
+
+    def predict(self, state: Any, questions: dict[str, Any]):
+        return self._get().predict(state, questions)
 
 
 class OwnedProvider:
@@ -127,6 +153,12 @@ def _deterministic_answers(text: str) -> tuple[str, dict[str, Any], dict[str, An
             "probabilities": {},
         },
         "requires_human_review": {"type": "noul", "noul": 1.0},
+        "agent_action": {
+            "type": "choice",
+            "choice": "escalate" if route == "safety" else ("enrich" if route == "medical_information" else ("review" if route == "quality" else "hold")),
+            "confidence": 0.75,
+            "probabilities": {"escalate": 1.0} if route == "safety" else ({"enrich": 1.0} if route == "medical_information" else ({"review": 1.0} if route == "quality" else {"hold": 1.0})),
+        },
         "route": {
             "type": "choice",
             "choice": route,
@@ -199,6 +231,7 @@ class DecisionEngine:
         self.backend = os.getenv("DECISION_BACKEND", "deterministic").strip().lower()
         self.fallback_enabled = os.getenv("DECISION_FALLBACK", "true").strip().lower() == "true"
         self._providers: dict[str, DecisionProvider] = {
+            "frontier": FrontierProvider(),
             "owned": OwnedProvider(),
             "laya": LayaProvider(),
             "jev": JevProvider(),
@@ -243,6 +276,15 @@ class DecisionEngine:
 
         raise RuntimeError("No decision provider succeeded: " + "; ".join(failures))
 
+    def _frontier_health(self) -> dict[str, Any]:
+        try:
+            from .frontier_model import frontier_health
+            return frontier_health()
+        except ImportError:
+            return {"backend":"frontier","available":False,"reason":"frontier dependencies are not installed"}
+        except Exception as exc:
+            return {"backend":"frontier","available":False,"reason":str(exc)[:300]}
+
     def _owned_health(self) -> dict[str, Any]:
         try:
             from .owned_model import owned_health
@@ -254,7 +296,10 @@ class DecisionEngine:
 
     def _provider_order(self) -> list[str]:
         if self.backend == "auto":
-            order = ["owned", "laya"]
+            order = []
+            if os.getenv("FRONTIER_ENABLED", "false").strip().lower() == "true":
+                order.append("frontier")
+            order.extend(["owned", "laya"])
             if os.getenv("JEV_API_KEY", "").strip():
                 order.append("jev")
             order.append("deterministic")
@@ -309,6 +354,7 @@ def decision_health() -> dict[str, Any]:
     return {
         "backend": _ENGINE.backend,
         "fallbackEnabled": _ENGINE.fallback_enabled,
+        "frontier": _ENGINE._frontier_health(),
         "owned": _ENGINE._owned_health(),
         "layaInstalled": __import__("importlib.util").util.find_spec("laya") is not None,
         "jevConfigured": bool(os.getenv("JEV_API_KEY", "").strip()),

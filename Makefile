@@ -1,4 +1,4 @@
-.PHONY: up local-up local-down status decision-health owned-train owned-evaluate owned-benchmark owned-calibrate owned-teacher-label owned-distill owned-register owned-promote logs test test-ai test-backend test-frontend smoke samples batch
+.PHONY: up local-up local-down status decision-health owned-train owned-evaluate owned-benchmark owned-calibrate owned-teacher-label owned-distill rlcd-train frontier-train frontier-rlcd frontier-evaluate frontier-export hf-upload owned-register owned-promote logs test test-ai test-backend test-frontend smoke samples batch
 
 up:
 	docker compose up --build
@@ -62,6 +62,24 @@ owned-teacher-label:
 
 owned-distill:
 	docker compose run --rm ai-service python -m ml.distill --teacher-jsonl /cache/clinevo-owned/teacher-decisions.jsonl --output /cache/clinevo-owned/distilled.pt --epochs ${OWNED_DISTILL_EPOCHS:-2} --temperature ${OWNED_DISTILL_TEMPERATURE:-2.0} --lora
+
+rlcd-train:
+	docker compose run --rm ai-service python -m ml.rlcd_train --size ${RLCD_SIZE:-512} --epochs ${RLCD_EPOCHS:-1} --init /cache/clinevo-owned/latest.pt --output /cache/clinevo-owned/rlcd.pt
+
+frontier-train:
+	docker compose run --rm ai-service python -m ml.train_frontier --size ${FRONTIER_TRAIN_SIZE:-256} --steps ${FRONTIER_TRAIN_STEPS:-500} --output /cache/clinevo-owned/frontier.pt
+
+frontier-rlcd:
+	docker compose run --rm ai-service python -m ml.frontier_rlcd --size ${FRONTIER_RLCD_SIZE:-512} --epochs ${FRONTIER_RLCD_EPOCHS:-1} --init /cache/clinevo-owned/frontier.pt --output /cache/clinevo-owned/frontier-rlcd.pt
+
+frontier-evaluate:
+	docker compose run --rm ai-service python -m ml.evaluate_frontier --checkpoint /cache/clinevo-owned/frontier.pt --size ${FRONTIER_EVAL_SIZE:-128}
+
+frontier-export:
+	docker compose run --rm ai-service python -m ml.export_frontier --checkpoint /cache/clinevo-owned/frontier.pt --output /cache/clinevo-owned/hub
+
+hf-upload:
+	docker compose run --rm ai-service python -m ml.hf_upload --repo-id ${HF_REPO_ID:-Aravindhan11/clinevo-one-frontier} --folder /cache/clinevo-owned/hub
 
 owned-register:
 	docker compose run --rm ai-service python -m ml.mlops register --checkpoint /cache/clinevo-owned/latest.pt --metrics /cache/clinevo-owned/metrics.json --dataset-version $${OWNED_DATASET_VERSION:-synthetic-v1} --model-version $${OWNED_MODEL_VERSION:-latest}

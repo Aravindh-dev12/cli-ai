@@ -2,3 +2,6 @@
 laya>=0.3.3,<0.4.0
 torch>=2.6,<3.0
 numpy>=2.0,<3.0
+transformers>=4.48,<6.0
+safetensors>=0.5,<1.0
+accelerate>=1.2,<2.0
