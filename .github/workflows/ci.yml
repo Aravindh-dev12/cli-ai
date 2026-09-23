@@ -61,9 +61,6 @@ jobs:
             samples/requirements.txt
       - run: sudo apt-get update && sudo apt-get install -y tesseract-ocr
       - run: pip install -r ai-service/requirements.txt -r samples/requirements.txt
-      env:
-        DECISION_BACKEND: deterministic
-        DECISION_FALLBACK: "false"
       - name: Generate deterministic synthetic corpus
         run: python samples/scripts/generate_corpus.py
       - name: Process assignment batch and record timings
