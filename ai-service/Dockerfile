@@ -4,8 +4,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr l
 RUN useradd --system --uid 10001 appuser
 WORKDIR /app
 RUN mkdir -p /cache/huggingface && chown -R 10001:10001 /cache
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt requirements-local.txt ./
+RUN pip install --no-cache-dir -r requirements-local.txt
 COPY app ./app
 COPY prompts ./prompts
 USER 10001
