@@ -76,6 +76,30 @@ class ClinevoOneFrontier(nn.Module):
     def _pair(self, state: Tensor, question: Tensor) -> Tensor:
         return torch.tanh(self.pair_proj(torch.cat([state, question], dim=-1)))
 
+    def decide_from_state(
+        self,
+        state: Tensor,
+        question_embeddings: Tensor,
+        question_type: str,
+        option_embeddings: Tensor | None = None,
+    ) -> dict[str, Tensor]:
+        question = torch.tanh(self.question_proj(question_embeddings.float()))
+        pair = self._pair(state, question)
+        if question_type == "noul":
+            return {"noul_logit": self.noul_head(pair).squeeze(-1)}
+        if question_type == "score":
+            return {"score_logits": self.score_head(pair)}
+        if question_type == "action":
+            return {"action_logits": self.action_head(pair)}
+        if question_type == "choice":
+            if option_embeddings is None:
+                raise ValueError("choice questions require option embeddings")
+            option = torch.tanh(self.choice_scorer(option_embeddings.float()))
+            pair_expanded = pair.unsqueeze(1).expand(-1, option.shape[1], -1)
+            option_state = torch.tanh(pair_expanded + option)
+            return {"choice_logits": self.choice_value(option_state).squeeze(-1)}
+        raise ValueError(f"unsupported frontier decision type: {question_type}")
+
     def forward(
         self,
         input_ids: Tensor,
@@ -167,23 +191,21 @@ class FrontierModelProvider:
         q_ids, q_mask = self._encode_texts(question_texts)
         with torch.inference_mode():
             q_emb = model.text_backbone(q_ids, q_mask)
+            state = model.encode_batch(input_ids, attention_mask, audio, accel)
             answers: dict[str, Any] = {}
             for index, name in enumerate(question_names):
                 question = questions[name]
                 qtype = str(question.get("type", "noul"))
                 options = option_groups[index]
                 option_embeddings = None
-                if qtype in {"choice", "action"}:
-                    option_embeddings, option_mask = self._encode_texts(options)
-                    option_embeddings = model.text_backbone(option_embeddings, option_mask).unsqueeze(0)
-                output = model(
-                    input_ids,
-                    attention_mask,
+                if qtype == "choice":
+                    option_ids, option_mask = self._encode_texts(options)
+                    option_embeddings = model.text_backbone(option_ids, option_mask).unsqueeze(0)
+                output = model.decide_from_state(
+                    state,
                     q_emb[index:index + 1],
-                    "action" if qtype == "action" else qtype,
+                    qtype,
                     option_embeddings=option_embeddings,
-                    audio_waveform=audio,
-                    accel=accel,
                 )
                 temperature = 1.0
                 if qtype == "noul":
