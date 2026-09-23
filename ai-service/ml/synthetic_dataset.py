@@ -12,6 +12,7 @@ class Example:
     audio: np.ndarray
     accel: np.ndarray
     labels: dict[str, Any]
+    subject_id: str = ""
 
 TEXT_BY_ROUTE = {
     'safety': [
@@ -66,8 +67,21 @@ def build_dataset(size: int = 256, seed: int = 7) -> list[Example]:
     for i in range(size):
         route = routes[i % len(routes)]
         text = TEXT_BY_ROUTE[route][int(rng.integers(0, len(TEXT_BY_ROUTE[route])))]
-        result.append(Example(text, _audio(route,rng), _accel(route,rng), labels[route].copy()))
+        result.append(Example(text, _audio(route,rng), _accel(route,rng), labels[route].copy(), subject_id=f"subject-{i // 4:04d}"))
     rng.shuffle(result)
     return result
 
-__all__=['Example','build_dataset']
+def split_dataset(records: list[Example], train: float = 0.8, val: float = 0.1, seed: int = 7):
+    from ml.signal_schema import subject_split
+    raw = [
+        {'subject_id': item.subject_id, 'index': index, 'example': item}
+        for index, item in enumerate(records)
+    ]
+    groups = subject_split(raw, train=train, val=val, seed=seed)
+    return (
+        [row['example'] for row in groups['train']],
+        [row['example'] for row in groups['validation']],
+        [row['example'] for row in groups['test']],
+    )
+
+__all__=['Example','build_dataset','split_dataset']
