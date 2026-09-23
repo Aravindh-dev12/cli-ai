@@ -1,5 +1,6 @@
 package com.clinevo.inbox.agent;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -7,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
+@ConditionalOnProperty(name = "clinevo.agent.enabled", havingValue = "true", matchIfMissing = true)
 @RequestMapping("/api/agent")
 public class AgentController {
     private final AgentOrchestratorService agent;
