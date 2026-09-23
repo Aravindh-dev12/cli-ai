@@ -34,6 +34,17 @@ services:
       LLM_MODEL: ${LLM_MODEL:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-45}
+      DECISION_BACKEND: ${DECISION_BACKEND:-laya}
+      DECISION_FALLBACK: ${DECISION_FALLBACK:-true}
+      LAYA_LOAD_MODE: ${LAYA_LOAD_MODE:-lazy}
+      LAYA_MAX_LOADED: ${LAYA_MAX_LOADED:-2}
+      LAYA_MODEL: ${LAYA_MODEL:-}
+      JEV_API_URL: ${JEV_API_URL:-https://api.typesafe.ai/v1/systemone}
+      JEV_MODEL: ${JEV_MODEL:-jev-latest}
+      JEV_API_KEY: ${JEV_API_KEY:-}
+      JEV_TIMEOUT_SECONDS: ${JEV_TIMEOUT_SECONDS:-15}
+      HF_HOME: /cache/huggingface
+    volumes: ["laya-cache:/cache"]
     ports: ["8000:8000"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
@@ -105,3 +116,4 @@ volumes:
   oracle-data:
   clamav-db:
   document-store:
+  laya-cache:

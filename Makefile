@@ -1,4 +1,4 @@
-.PHONY: up down logs test test-ai test-backend test-frontend smoke samples batch
+.PHONY: up local-up local-down status decision-health logs test test-ai test-backend test-frontend smoke samples batch
 
 up:
 	docker compose up --build
@@ -28,3 +28,16 @@ samples:
 
 batch:
 	python samples/scripts/run_batch.py --url http://localhost:8000
+
+local-up:
+	bash scripts/clinevo-local.sh up
+
+local-down:
+	bash scripts/clinevo-local.sh down
+
+status:
+	python tools/clinevo.py status
+
+decision-health:
+	curl -fsS http://localhost:8000/decision/health
+

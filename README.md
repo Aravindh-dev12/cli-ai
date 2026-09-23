@@ -184,6 +184,25 @@ API route: `POST /api/literature/screen`.
 
 Authentication is mode-based. `AUTH_MODE=demo` keeps the isolated candidate workflow simple and supports an API key for mutations. `AUTH_MODE=oidc` enables JWT/OAuth2 resource-server validation and role-based authorization; see `docs/SECURITY.md`.
 
+## Local agent runtime with Laya and Jev
+
+Clinevo now includes a LARRI-style local control plane around the inbox worker: durable agent state, explicit transitions, pause/resume, reconciliation, operator CLI/TUI/MCP, and append-only agent events.
+
+The decision layer uses the same typed System One shape as Laya/Jev:
+- **Laya** is the default local/open-weight provider. Its Router can select the English, multilingual, or typed-decisions checkpoint for a request and evaluates `choice`, `score`, and `noul` questions in one pass. citeturn776792view0turn752572view0
+- **Jev** is an optional hosted TypeSafe provider using `POST /v1/systemone` with `state`, `model`, and typed questions. citeturn596029view0
+- **Deterministic** mode remains the CI/offline baseline.
+
+Every AI text/PDF result includes a decision trace, and the backend persists that trace in `AGENT_DECISION` with provider, model, latency, fallback usage, routing metadata, and typed answers.
+
+### One-command local run
+
+```bash
+make local-up
+```
+
+The local launcher starts Oracle, ClamAV, the AI service, Spring Boot, and Angular, waits for service health, and warms the configured decision provider. See `docs/LOCAL_RUNTIME.md` for Laya/Jev switching and `docs/AGENT_CORE.md` for the durable agent lifecycle.
+
 ## Tests and CI
 
 GitHub Actions runs service-level build/tests on every pull request and then gates the full-stack smoke test on those jobs:

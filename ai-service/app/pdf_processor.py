@@ -12,6 +12,7 @@ from PIL import Image
 from pypdf import PdfReader
 
 from .classifier import classify, extract_facts
+from .decision_engine import evaluate_inbox
 from .llm import StructuredLlmClient, validate_provenance
 from .models import AiDecision, ImageFinding, ProcessingResult, TableData, TranslationInfo, TranslationPage
 
@@ -392,4 +393,5 @@ def process_pdf(file_name: str, data: bytes, email_text: str = "") -> Processing
         images=_extract_images(data),
         extracted_facts=decision.extracted_facts,
         processing_ms=processing_ms,
+        decision=system_one,
     )

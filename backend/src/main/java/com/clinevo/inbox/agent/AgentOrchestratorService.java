@@ -112,7 +112,11 @@ public class AgentOrchestratorService {
         AgentPolicyEngine.Decision decision =
             policyEngine.evaluate(confidence, sourcedFacts, totalFacts);
 
-        transition(job, AgentState.WAITING_REVIEW, "REVIEW_REQUIRED", decision.reason());
+        String systemOne = latestSystemOneDecision(job.messageId());
+        String reason = systemOne.isBlank()
+            ? decision.reason()
+            : decision.reason() + " System One evidence: " + systemOne;
+        transition(job, AgentState.WAITING_REVIEW, "REVIEW_REQUIRED", reason);
     }
 
     @Transactional
@@ -138,6 +142,18 @@ public class AgentOrchestratorService {
             }
         }
     }
+    private String latestSystemOneDecision(long messageId) {
+        List<Map<String, Object>> rows = jdbc.queryForList(
+            "SELECT PROVIDER,MODEL,FALLBACK_USED FROM AGENT_DECISION " +
+            "WHERE MESSAGE_ID=? ORDER BY CREATED_AT DESC FETCH FIRST 1 ROWS ONLY",
+            messageId);
+        if (rows.isEmpty()) return "";
+        Map<String, Object> row = rows.get(0);
+        return "provider=" + row.get("PROVIDER")
+            + ", model=" + row.get("MODEL")
+            + ", fallback=" + row.get("FALLBACK_USED");
+    }
+
     private void fail(Job job, Exception ex) {
         String message = ex.getMessage() == null
             ? ex.getClass().getSimpleName() : ex.getMessage();

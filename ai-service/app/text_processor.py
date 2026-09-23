@@ -4,6 +4,7 @@ import re
 import time
 
 from .classifier import classify, extract_facts
+from .decision_engine import evaluate_inbox
 from .llm import StructuredLlmClient, validate_provenance
 from .models import AiDecision, TextProcessingResult
 
@@ -38,6 +39,11 @@ def _as_email_provenance(facts: dict, source_name: str) -> dict:
 def process_text(source_name: str, text: str) -> TextProcessingResult:
     started = time.perf_counter()
     classifications = classify(text)
+    system_one = evaluate_inbox({
+        "source_type": "EMAIL",
+        "source_name": source_name,
+        "body": text[:12000],
+    })
     decision = AiDecision(
         classifications=classifications,
         summary=_summary(text, classifications),
@@ -53,4 +59,5 @@ def process_text(source_name: str, text: str) -> TextProcessingResult:
         summary=decision.summary,
         extracted_facts=decision.extracted_facts,
         processing_ms=int((time.perf_counter() - started) * 1000),
+        decision=system_one,
     )

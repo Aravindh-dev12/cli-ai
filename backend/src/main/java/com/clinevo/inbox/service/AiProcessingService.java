@@ -42,6 +42,7 @@ public class AiProcessingService {
     private final MalwareScanner malwareScanner;
     private final OriginalDocumentStore documentStore;
     private final DocumentRetentionService retentionService;
+    private final AgentDecisionPersistenceService decisionPersistence;
     private final int maxAttempts;
     private final int jobBatchSize;
     private final long retryBaseSeconds;
@@ -55,6 +56,7 @@ public class AiProcessingService {
             MalwareScanner malwareScanner,
             OriginalDocumentStore documentStore,
             DocumentRetentionService retentionService,
+            AgentDecisionPersistenceService decisionPersistence,
             @Value("${clinevo.ai-service-url}") String aiServiceUrl,
             @Value("${clinevo.job-max-attempts:3}") int maxAttempts,
             @Value("${clinevo.job-batch-size:4}") int jobBatchSize,
@@ -68,6 +70,7 @@ public class AiProcessingService {
         this.malwareScanner = malwareScanner;
         this.documentStore = documentStore;
         this.retentionService = retentionService;
+        this.decisionPersistence = decisionPersistence;
         this.maxAttempts = Math.max(1, maxAttempts);
         this.jobBatchSize = Math.max(1, Math.min(jobBatchSize, 20));
         this.retryBaseSeconds = Math.max(1, retryBaseSeconds);
@@ -184,6 +187,7 @@ public class AiProcessingService {
         String emailText = message.getBodyText() == null ? "" : message.getBodyText();
         if (!emailText.isBlank()) {
             JsonNode emailResult = callTextAiService(messageId, emailText);
+            decisionPersistence.persist(messageId, null, emailResult);
             collectClassifications(classifications, emailResult);
             persistFacts(messageId, null, emailResult);
             String summary = emailResult.path("summary").asText("");
@@ -195,6 +199,7 @@ public class AiProcessingService {
             try {
                 StoredAttachment materialized = materializeAttachmentBytes(attachment);
                 JsonNode result = callPdfAiService(emailText, materialized);
+                decisionPersistence.persist(messageId, materialized.id(), result);
                 updateAttachmentResult(materialized.id(), result);
                 collectClassifications(classifications, result);
                 persistFacts(messageId, materialized.id(), result);
