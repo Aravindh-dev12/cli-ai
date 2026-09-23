@@ -125,7 +125,7 @@ public class AgentOrchestratorService {
         for (Job job : jobs) {
             Long reviewCount = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM AUDIT_EVENT WHERE MESSAGE_ID=? " +
-                "AND EVENT_TYPE IN ('REVIEW_ACCEPTED','REVIEW_OVERRIDDEN')",
+                "AND EVENT_TYPE LIKE 'REVIEW%'",
                 Long.class, job.messageId());
             if (reviewCount != null && reviewCount > 0) {
                 transition(job, AgentState.FINALIZED, "REVIEW_COMPLETED",
