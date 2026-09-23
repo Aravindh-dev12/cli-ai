@@ -1,6 +1,6 @@
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 USE_TF=0 TOKENIZERS_PARALLELISM=false HF_HOME=/cache/huggingface
-RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr libgl1 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr libgl1 libgomp1 && rm -rf /var/lib/apt/lists/*
 RUN useradd --system --uid 10001 appuser
 WORKDIR /app
 RUN mkdir -p /cache/huggingface && chown -R 10001:10001 /cache
