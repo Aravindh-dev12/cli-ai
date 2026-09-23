@@ -1,4 +1,4 @@
-.PHONY: up local-up local-down status decision-health logs test test-ai test-backend test-frontend smoke samples batch
+.PHONY: up local-up local-down status decision-health owned-train owned-evaluate logs test test-ai test-backend test-frontend smoke samples batch
 
 up:
 	docker compose up --build
@@ -41,3 +41,9 @@ status:
 decision-health:
 	curl -fsS http://localhost:8000/decision/health
 
+
+owned-train:
+	docker compose run --rm ai-service python -m ml.train_owned --size $${OWNED_TRAIN_SIZE:-128} --epochs $${OWNED_TRAIN_EPOCHS:-2}
+
+owned-evaluate:
+	docker compose run --rm ai-service python -m ml.evaluate_owned --checkpoint /cache/clinevo-owned/latest.pt --size $${OWNED_EVAL_SIZE:-256}
