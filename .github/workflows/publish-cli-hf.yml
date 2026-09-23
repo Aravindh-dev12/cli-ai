@@ -6,7 +6,7 @@ on:
       model_repo:
         description: Hugging Face model repository
         required: true
-        default: Aravindhan11/cli
+        default: Aravindhan11/cli-ai
       private:
         description: Publish as private
         required: false
