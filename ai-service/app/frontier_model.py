@@ -198,15 +198,19 @@ class FrontierModelProvider:
                 qtype = str(question.get("type", "noul"))
                 options = option_groups[index]
                 option_embeddings = None
-                if qtype == "choice":
-                    option_ids, option_mask = self._encode_texts(options)
-                    option_embeddings = model.text_backbone(option_ids, option_mask).unsqueeze(0)
-                output = model.decide_from_state(
-                    state,
-                    q_emb[index:index + 1],
-                    qtype,
-                    option_embeddings=option_embeddings,
-                )
+                if qtype == "choice" and name == "agent_action":
+                    question_vec = torch.tanh(model.question_proj(q_emb[index:index + 1].float()))
+                    output = {"action_logits": model.action_head(model._pair(state, question_vec))}
+                else:
+                    if qtype == "choice":
+                        option_ids, option_mask = self._encode_texts(options)
+                        option_embeddings = model.text_backbone(option_ids, option_mask).unsqueeze(0)
+                    output = model.decide_from_state(
+                        state,
+                        q_emb[index:index + 1],
+                        qtype,
+                        option_embeddings=option_embeddings,
+                    )
                 temperature = 1.0
                 if qtype == "noul":
                     p = float(torch.sigmoid(output["noul_logit"] / temperature).item())
