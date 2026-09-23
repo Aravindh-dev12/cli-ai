@@ -52,7 +52,7 @@ Docker Compose defaults to:
 DECISION_BACKEND=laya
 DECISION_FALLBACK=true
 LAYA_LOAD_MODE=lazy
-LAYA_MAX_LOADED=1
+LAYA_MAX_LOADED=2
 ```
 
 Laya is an open-weight Apache-2.0 decision model family. The local adapter uses the published `Router` API. Laya can automatically route multilingual state to the appropriate checkpoint; the cache is mounted as a Docker volume so weights do not need to be downloaded into the image on every rebuild.
@@ -94,7 +94,7 @@ DECISION_BACKEND=laya
 
 The decision trace is returned on every AI text/PDF processing result with provider, model, latency, routing metadata and whether fallback was used.
 
-The System One signal is intentionally not used to invent clinical facts. Existing source-grounded extraction and provenance rules remain authoritative, and the human reviewer remains required under the current pv-1 policy.
+The System One signal is intentionally not used to invent clinical facts. Existing source-grounded extraction and provenance rules remain authoritative, and the human reviewer remains required under the current pv-1 policy. The latest provider/model/fallback metadata is persisted in Oracle as AGENT_DECISION evidence and included in the agent's review-required event.
 
 ## One-command local run
 
