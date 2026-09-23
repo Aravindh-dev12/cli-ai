@@ -5,7 +5,7 @@ from huggingface_hub import HfApi
 
 def main() -> None:
     parser = argparse.ArgumentParser(description='Upload a ClinevoOne-Frontier export to the Hugging Face Hub')
-    parser.add_argument('--repo-id', default='Aravindhan11/cli')
+    parser.add_argument('--repo-id', default='Aravindhan11/cli-ai')
     parser.add_argument('--folder', default='/cache/clinevo-owned/hub')
     parser.add_argument('--private', action='store_true')
     args = parser.parse_args()
