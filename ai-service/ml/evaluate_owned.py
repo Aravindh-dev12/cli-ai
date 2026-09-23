@@ -10,7 +10,7 @@ import torch
 
 from app.decision_engine import INBOX_DECISION_QUESTIONS
 from app.owned_model import ClinevoOne, _question_text, text_to_ids
-from ml.synthetic_dataset import build_dataset
+from ml.synthetic_dataset import build_dataset, split_dataset
 
 
 def _ece(confidence, correct, bins=10):
@@ -87,6 +87,8 @@ def main() -> None:
         "mean_latency_ms": float(np.mean(latencies)),
         "parameter_count": float(sum(p.numel() for p in model.parameters())),
         "dataset_version": payload.get("dataset_version"),
+        "split": "subject-held-out",
+        "test_subject_count": len({item.subject_id for item in data}),
     }
     result = {"model_version": payload.get("model_version"), "metrics": metrics}
     output = Path(args.out)
