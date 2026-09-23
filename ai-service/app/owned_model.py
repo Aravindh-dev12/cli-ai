@@ -200,14 +200,32 @@ def _question_text(name: str, question: dict[str, Any]) -> str:
     return f'{name} {question.get("type", "noul")} {question.get("instructions", "")} {criteria}'
 
 def _audio_tensor(state: Any) -> Tensor | None:
-    if not isinstance(state, dict): return None
+    if not isinstance(state, dict):
+        return None
+    from ml.signal_schema import validate_audio
+
+    sample_rate = int(state.get('audio_sample_rate', AUDIO_RATE))
     if state.get('audio') is not None:
-        from ml.signal_schema import validate_audio
-        return torch.tensor(validate_audio(state['audio']), dtype=torch.float32)
-    encoded = state.get('audio_base64')
-    if encoded:
-        return torch.from_numpy(np.frombuffer(base64.b64decode(encoded), dtype=np.float32).copy())
-    return None
+        waveform = validate_audio(state['audio'], sample_rate=sample_rate)
+    else:
+        encoded = state.get('audio_base64')
+        if not encoded:
+            return None
+        try:
+            decoded = base64.b64decode(encoded, validate=True)
+        except (ValueError, TypeError):
+            raise ValueError('audio_base64 is not valid base64')
+        waveform = validate_audio(np.frombuffer(decoded, dtype=np.float32).copy(), sample_rate=sample_rate)
+
+    if waveform.size == 0:
+        return torch.zeros(0, dtype=torch.float32)
+    if sample_rate != AUDIO_RATE:
+        source = torch.from_numpy(waveform).float().view(1, 1, -1)
+        target_length = max(1, round(waveform.size * AUDIO_RATE / sample_rate))
+        waveform = torch.nn.functional.interpolate(
+            source, size=target_length, mode='linear', align_corners=False
+        ).view(-1).numpy()
+    return torch.tensor(waveform, dtype=torch.float32)
 
 def _accel_tensor(state: Any) -> Tensor | None:
     if not isinstance(state, dict) or state.get('accelerometer') is None: return None

@@ -9,7 +9,7 @@ from torch import nn
 
 from app.decision_engine import INBOX_DECISION_QUESTIONS
 from app.owned_model import ClinevoOne, _question_text, text_to_ids
-from ml.synthetic_dataset import build_dataset
+from ml.synthetic_dataset import build_dataset, split_dataset
 
 
 def fit_temperature(logits: torch.Tensor, targets: torch.Tensor, binary: bool) -> float:
@@ -57,8 +57,7 @@ def ece_binary(logits: torch.Tensor, targets: torch.Tensor, temperature: float, 
     return value
 
 
-def collect(model: ClinevoOne, size: int):
-    data = build_dataset(size, seed=2026)
+def collect(model: ClinevoOne, data):
     logits: dict[str, list[torch.Tensor]] = {name: [] for name in INBOX_DECISION_QUESTIONS}
     targets: dict[str, list[torch.Tensor]] = {name: [] for name in INBOX_DECISION_QUESTIONS}
     binary: dict[str, bool] = {}
@@ -93,7 +92,7 @@ def collect(model: ClinevoOne, size: int):
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Fit held-out temperature scaling for ClinevoOne")
+    parser = argparse.ArgumentParser(description="Fit temperature scaling on an independent subject-held-out calibration partition")
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--size", type=int, default=256)
     parser.add_argument("--out", default="/cache/clinevo-owned/calibration.json")
@@ -104,7 +103,12 @@ def main() -> None:
     model.load_state_dict(payload["model"], strict=True)
     model.eval()
 
-    logits, targets, binary = collect(model, args.size)
+    records = build_dataset(args.size * 2, seed=2026)
+    _, calibration_set, _ = split_dataset(records, seed=2026)
+    if not calibration_set:
+        raise ValueError("subject-held-out calibration split is empty; increase --size")
+
+    logits, targets, binary = collect(model, calibration_set)
     temperatures: dict[str, float] = {}
     metrics: dict[str, dict[str, float]] = {}
 
@@ -126,7 +130,14 @@ def main() -> None:
         "temperatures": temperatures,
         "metrics": metrics,
         "calibration_method": "global_temperature_scaling",
-        "dataset": {"version": payload.get("dataset_version", "unknown"), "size": args.size, "seed": 2026},
+        "dataset": {
+            "version": "synthetic-v1",
+            "seed": 2026,
+            "records_generated": len(records),
+            "calibration_example_count": len(calibration_set),
+            "calibration_subject_count": len({item.subject_id for item in calibration_set}),
+            "split": "subject-held-out",
+        },
     }
     output = Path(args.out)
     output.parent.mkdir(parents=True, exist_ok=True)

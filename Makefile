@@ -85,4 +85,4 @@ owned-register:
 	docker compose run --rm ai-service python -m ml.mlops register --checkpoint /cache/clinevo-owned/latest.pt --metrics /cache/clinevo-owned/metrics.json --dataset-version $${OWNED_DATASET_VERSION:-synthetic-v1} --model-version $${OWNED_MODEL_VERSION:-latest}
 
 owned-promote:
-	docker compose run --rm ai-service python -m ml.mlops promote --model-version ${OWNED_MODEL_VERSION:-latest} --min-accuracy ${OWNED_MIN_ACCURACY:-0.80} --min-macro-f1 ${OWNED_MIN_MACRO_F1:-0.80} --max-ece ${OWNED_MAX_ECE:-0.15} --max-p95-ms ${OWNED_MAX_P95_MS:-1500} --baseline-max ${OWNED_BASELINE_MAX:-0.0}
+	docker compose run --rm ai-service python -m ml.mlops promote --model-version ${OWNED_MODEL_VERSION:-latest} --min-accuracy ${OWNED_MIN_ACCURACY:-0.80} --min-macro-f1 ${OWNED_MIN_MACRO_F1:-0.80} --max-ece ${OWNED_MAX_ECE:-0.15} --max-p95-ms ${OWNED_MAX_P95_MS:-1500}

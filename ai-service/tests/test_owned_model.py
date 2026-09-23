@@ -1,6 +1,9 @@
+import base64
+
 import pytest
 
 torch = pytest.importorskip("torch")
+import numpy as np
 
 from app.owned_model import ClinevoOne, _question_text, text_to_ids
 from app.decision_engine import INBOX_DECISION_QUESTIONS
@@ -103,3 +106,17 @@ def test_pair_normalizes_single_sample_question_shape():
         encoded = model.encode_state(state)
         pair = model._pair(encoded, question)
     assert pair.shape == (512,)
+
+
+def test_audio_inputs_validate_base64_and_resample_to_model_rate():
+    from app.owned_model import _audio_tensor
+
+    source = np.linspace(-0.5, 0.5, 80, dtype=np.float32)
+    state = {
+        "audio_base64": base64.b64encode(source.tobytes()).decode("ascii"),
+        "audio_sample_rate": 8000,
+    }
+    audio = _audio_tensor(state)
+    assert audio.dtype == torch.float32
+    assert audio.numel() == 160
+    assert float(audio.abs().max()) == pytest.approx(1.0)

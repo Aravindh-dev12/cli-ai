@@ -1,12 +1,12 @@
 # CLI v2 live benchmark
 
-Run the GitHub Actions workflow **CLI v2 live benchmark** to compare the in-house ClinevoOne-v1 route model with live Laya and, when configured, live Jev.
+Run the GitHub Actions workflow **CLI v2 live benchmark** to compare the in-house ClinevoOne-v1 route model with live Laya and, when configured, live Jev. Pushes to `main` and manual dispatches now use the same benchmark protocol.
 
 ## Protocol
 
 The CLI checkpoint is trained on synthetic seed 7. The benchmark is generated from a different seed and then evaluated only on the subject-held-out test partition.
 
-Metrics: route accuracy, macro F1, confidence ECE against correctness, request error rate, mean confidence, and p50/p95 latency.
+Metrics: route accuracy, macro F1, confidence ECE against correctness, request error rate, mean confidence, and p50/p95 steady-state latency. Each provider receives one warmup request; warmup time is reported separately and excluded from p50/p95.
 
 Jev is invoked only when the repository has a valid `TYPESAFE_API_KEY` secret. Jev outputs are comparison-only and are not used for training or distillation.
 
@@ -27,6 +27,10 @@ These figures are an integration smoke result, not production evidence. The mode
 The current Laya model card describes the English checkpoint as a 421M-parameter ModernBERT-large decision model with request-time option scoring, single-forward-pass question batching, and RLCD training. Its published speed table reports 39.5 ms for one question and 158.6 ms for ten questions on a Tesla T4. Those are Laya's published measurements, not this repository's hardware benchmark.
 
 The TypeSafe API documents `POST /v1/systemone` and bearer-token authentication for Jev.
+
+## v2 CI fix
+
+The first v2 push run on 2026-09-23 reached model training successfully but failed before comparison because the workflow expanded the optional manual-dispatch input to an empty `--size` argument. The workflow now resolves the benchmark size to 64 on both push and manual runs, so the benchmark executes from the same configuration.
 
 ## Hugging Face
 
