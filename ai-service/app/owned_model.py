@@ -197,7 +197,7 @@ class OwnedModelProvider:
                 if qtype == 'noul':
                     p = float(torch.sigmoid(output['noul_logit']).item()); answers[name] = {'type':'noul','noul':p,'confidence':abs(p-0.5)*2}
                 elif qtype == 'score':
-                    probs = torch.softmax(output['score_logits'], dim=-1); score = float((probs * torch.arange(3)).sum().item())
+                    probs = torch.softmax(output['score_logits'], dim=-1); score = float((probs * torch.arange(4)).sum().item())
                     answers[name] = {'type':'score','score':score,'confidence':float(probs.max().item()),'probabilities':{str(i):float(v) for i,v in enumerate(probs.tolist())}}
                 else:
                     choices = list(question.get('criteria', {}).keys()) or [f'choice_{i}' for i in range(output['choice_logits'].numel())]
