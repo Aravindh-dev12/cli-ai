@@ -309,7 +309,7 @@ def decision_health() -> dict[str, Any]:
     return {
         "backend": _ENGINE.backend,
         "fallbackEnabled": _ENGINE.fallback_enabled,
-        "owned": self._owned_health(),
+        "owned": _ENGINE._owned_health(),
         "layaInstalled": __import__("importlib.util").util.find_spec("laya") is not None,
         "jevConfigured": bool(os.getenv("JEV_API_KEY", "").strip()),
         "questions": list(INBOX_DECISION_QUESTIONS.keys()),
