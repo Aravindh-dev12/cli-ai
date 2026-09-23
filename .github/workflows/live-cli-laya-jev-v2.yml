@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      TYPESAFE_API_KEY: ${{ inputs.benchmark_size && secrets.TYPESAFE_API_KEY || secrets.TYPESAFE_API_KEY }}
+      TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
       JEV_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
       LAYA_LOAD_MODE: lazy
       BENCHMARK_SIZE: ${{ inputs.benchmark_size || '64' }}
