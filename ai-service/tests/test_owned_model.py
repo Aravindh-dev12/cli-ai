@@ -1,9 +1,9 @@
 import base64
 
-import numpy as np
 import pytest
 
 torch = pytest.importorskip("torch")
+import numpy as np
 
 from app.owned_model import ClinevoOne, _question_text, text_to_ids
 from app.decision_engine import INBOX_DECISION_QUESTIONS
