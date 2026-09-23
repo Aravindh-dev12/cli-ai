@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 Category = Literal["ICSR", "PQC", "MI", "NOT_RELEVANT"]
@@ -62,6 +62,21 @@ class ImageFinding(BaseModel):
     height: int | None = None
 
 
+class DecisionTrace(BaseModel):
+    provider: str
+    model: str
+    latency_ms: int = Field(ge=0)
+    answers: dict[str, Any] = Field(default_factory=dict)
+    model_routing: dict[str, Any] = Field(default_factory=dict)
+    fallback_used: bool = False
+    fallback_reason: str | None = None
+
+
+class DecisionRequest(BaseModel):
+    state: str | dict[str, Any] | list[Any]
+    questions: dict[str, Any] | None = None
+
+
 class AiDecision(BaseModel):
     classifications: list[Classification]
     summary: str
@@ -80,6 +95,7 @@ class ProcessingResult(BaseModel):
     images: list[ImageFinding] = Field(default_factory=list)
     extracted_facts: dict[str, dict[str, ExtractedValue]] = Field(default_factory=dict)
     processing_ms: int
+    decision: DecisionTrace | None = None
 
 
 class TextProcessingRequest(BaseModel):
@@ -92,6 +108,7 @@ class TextProcessingResult(BaseModel):
     summary: str
     extracted_facts: dict[str, dict[str, ExtractedValue]] = Field(default_factory=dict)
     processing_ms: int
+    decision: DecisionTrace | None = None
 
 
 class LiteratureCaseResult(BaseModel):
