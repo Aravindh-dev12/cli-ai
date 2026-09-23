@@ -19,6 +19,8 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -43,8 +45,6 @@ jobs:
           if-no-files-found: error
       - name: Publish model when HF write token is available
         if: env.HF_TOKEN != ''
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         working-directory: ai-service
         run: python -m ml.hf_upload --repo-id '${{ inputs.model_repo }}' --folder /tmp/hf $( [ '${{ inputs.private }}' = 'true' ] && echo '--private' )
       - name: Report Hugging Face publication state
