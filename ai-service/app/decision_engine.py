@@ -184,7 +184,7 @@ class JevProvider:
 
 class DecisionEngine:
     def __init__(self) -> None:
-        self.backend = os.getenv("DECISION_BACKEND", "laya").strip().lower()
+        self.backend = os.getenv("DECISION_BACKEND", "deterministic").strip().lower()
         self.fallback_enabled = os.getenv("DECISION_FALLBACK", "true").strip().lower() == "true"
         self._providers: dict[str, DecisionProvider] = {
             "laya": LayaProvider(),
@@ -284,7 +284,7 @@ def decision_health() -> dict[str, Any]:
     return {
         "backend": _ENGINE.backend,
         "fallbackEnabled": _ENGINE.fallback_enabled,
-        "layaInstalled": "laya" in __import__("sys").modules,
+        "layaInstalled": __import__("importlib.util").util.find_spec("laya") is not None,
         "jevConfigured": bool(os.getenv("JEV_API_KEY", "").strip()),
         "questions": list(INBOX_DECISION_QUESTIONS.keys()),
     }
