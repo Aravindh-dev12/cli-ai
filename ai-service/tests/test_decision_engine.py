@@ -1,4 +1,9 @@
+import os
+
 from app.decision_engine import evaluate_inbox
+
+
+os.environ.setdefault("USE_TF", "0")
 
 
 def test_deterministic_fallback_has_typed_answers(monkeypatch):
