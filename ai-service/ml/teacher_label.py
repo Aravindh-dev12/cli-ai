@@ -5,7 +5,7 @@ import json
 import os
 from pathlib import Path
 
-from app.decision_engine import INBOX_DECISION_QUESTIONS, JevProvider, LayaProvider
+from app.decision_engine import INBOX_DECISION_QUESTIONS, LayaProvider
 from ml.synthetic_dataset import build_dataset
 
 
@@ -13,9 +13,7 @@ def _provider(name: str):
     if name == "laya":
         return LayaProvider()
     if name == "jev":
-        if not os.getenv("JEV_API_KEY", "").strip():
-            raise RuntimeError("JEV_API_KEY is required for Jev teacher labeling")
-        return JevProvider()
+        raise ValueError("Jev output distillation is disabled; use Jev only as an external reference.")
     raise ValueError(f"unsupported teacher: {name}")
 
 
@@ -28,6 +26,8 @@ def main() -> None:
     args = parser.parse_args()
 
     question = {"route": INBOX_DECISION_QUESTIONS["route"]}
+    if any(name.strip().lower() == "jev" for name in args.teachers.split(",")):
+        raise SystemExit("Jev output distillation is disabled by the current TypeSafe terms.")
     providers = [(name.strip(), _provider(name.strip())) for name in args.teachers.split(",") if name.strip()]
     data = build_dataset(args.size, seed=args.seed)
 
