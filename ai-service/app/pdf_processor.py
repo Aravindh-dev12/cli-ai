@@ -380,6 +380,12 @@ def process_pdf(file_name: str, data: bytes, email_text: str = "") -> Processing
         if not 10 <= _summary_sentence_count(decision.summary) <= 15:
             decision.summary = _summary(translated_text or analysis_text, decision.classifications)
 
+    system_one = evaluate_inbox({
+        "source_type": "PDF",
+        "source_name": file_name,
+        "email_text": email_text[:12000],
+        "pdf_text": analysis_text[:20000],
+    })
     processing_ms = int((time.perf_counter() - started) * 1000)
     return ProcessingResult(
         file_name=file_name,

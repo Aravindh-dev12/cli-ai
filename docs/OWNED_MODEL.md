@@ -24,6 +24,8 @@ make owned-train
 make owned-evaluate
 make owned-benchmark
 make owned-calibrate
+make owned-teacher-label
+make owned-distill
 
 Model artifacts are kept under /cache/clinevo-owned inside the persistent local model volume.
 
@@ -35,7 +37,7 @@ Benchmark policy:
 
 The initial synthetic dataset exists only to prove the model and MLOps plumbing. It is not evidence of real-world pet-wellness, audio, accelerometer, or pharmacovigilance performance.
 
-For a real pet-wellness product, add representative audio/IMU recordings, subject-level splits, sensor-quality checks, augmentation, class-imbalance handling, external validation, and a labeled evaluation set before promotion.
+For a real pet-wellness product, add representative audio/IMU recordings, subject-level splits, sensor-quality checks, augmentation, class-imbalance handling, external validation, and a labeled evaluation set before promotion. See `docs/RESEARCH_TRACK.md` for the public-dataset inventory, licensing notes, and the proposed experiment matrix.
 
 ## Connection to Clinevo
 
