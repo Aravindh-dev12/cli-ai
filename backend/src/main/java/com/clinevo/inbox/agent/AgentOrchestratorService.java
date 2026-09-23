@@ -25,6 +25,7 @@ public class AgentOrchestratorService {
         if (runtimeStatus() == AgentRuntimeStatus.PAUSED) return;
         observeMessages();
         advanceJobs();
+        reconcileReviewOutcomes();
     }
 
     @Transactional
@@ -112,6 +113,29 @@ public class AgentOrchestratorService {
         transition(job, AgentState.WAITING_REVIEW, "REVIEW_REQUIRED", decision.reason());
     }
 
+    @Transactional
+    public void reconcileReviewOutcomes() {
+        List<Job> jobs = jdbc.query(
+            "SELECT ID,MESSAGE_ID,STATE,ATTEMPT_COUNT FROM AGENT_JOB " +
+            "WHERE STATE='WAITING_REVIEW' ORDER BY UPDATED_AT FETCH FIRST 50 ROWS ONLY",
+            (rs, rowNum) -> new Job(
+                rs.getLong("ID"), rs.getLong("MESSAGE_ID"),
+                AgentState.valueOf(rs.getString("STATE")), rs.getInt("ATTEMPT_COUNT")));
+
+        for (Job job : jobs) {
+            Long reviewCount = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM AUDIT_EVENT WHERE MESSAGE_ID=? " +
+                "AND EVENT_TYPE IN ('REVIEW_ACCEPTED','REVIEW_OVERRIDDEN')",
+                Long.class, job.messageId());
+            if (reviewCount != null && reviewCount > 0) {
+                transition(job, AgentState.FINALIZED, "REVIEW_COMPLETED",
+                    "existing human review workflow reached a terminal decision");
+                jdbc.update(
+                    "UPDATE AGENT_JOB SET COMPLETED_AT=?,UPDATED_AT=? WHERE ID=?",
+                    Instant.now(), Instant.now(), job.id());
+            }
+        }
+    }
     private void fail(Job job, Exception ex) {
         String message = ex.getMessage() == null
             ? ex.getClass().getSimpleName() : ex.getMessage();
