@@ -61,6 +61,16 @@ INBOX_DECISION_QUESTIONS: dict[str, dict[str, Any]] = {
             "false": "No regulated interpretation is required and an explicit local policy permits autonomous handling.",
         },
     },
+    "agent_action": {
+        "type": "choice",
+        "instructions": "What bounded agent action is appropriate for this item before human review?",
+        "criteria": {
+            "enrich": "Collect or normalize additional non-terminal evidence before review.",
+            "review": "Place the item in the normal human review workstream.",
+            "escalate": "Prioritize human review because the evidence indicates elevated risk or urgency.",
+            "hold": "Do not take another automated action; preserve the item for controlled review."
+        },
+    },
     "route": {
         "type": "choice",
         "instructions": "Which operational workstream should own this item first?",
@@ -74,7 +84,7 @@ INBOX_DECISION_QUESTIONS: dict[str, dict[str, Any]] = {
 }
 
 
-class OwnedProvider:
+class FrontierProvider:\n    name = "frontier"\n    def __init__(self): self._provider = None\n    def _get(self):\n        if self._provider is None:\n            from .frontier_model import FrontierModelProvider\n            self._provider = FrontierModelProvider()\n        return self._provider\n    def predict(self, state: Any, questions: dict[str, Any]):\n        return self._get().predict(state, questions)\n\n\nclass OwnedProvider:
     name = 'owned'
     def __init__(self): self._provider = None
     def _get(self):
@@ -199,7 +209,7 @@ class DecisionEngine:
         self.backend = os.getenv("DECISION_BACKEND", "deterministic").strip().lower()
         self.fallback_enabled = os.getenv("DECISION_FALLBACK", "true").strip().lower() == "true"
         self._providers: dict[str, DecisionProvider] = {
-            "owned": OwnedProvider(),
+            "frontier": FrontierProvider(),\n            "owned": OwnedProvider(),
             "laya": LayaProvider(),
             "jev": JevProvider(),
             "deterministic": _DeterministicProvider(),
@@ -243,7 +253,7 @@ class DecisionEngine:
 
         raise RuntimeError("No decision provider succeeded: " + "; ".join(failures))
 
-    def _owned_health(self) -> dict[str, Any]:
+    def _frontier_health(self) -> dict[str, Any]:\n        try:\n            from .frontier_model import frontier_health\n            return frontier_health()\n        except ImportError:\n            return {"backend":"frontier","available":False,"reason":"frontier dependencies are not installed"}\n        except Exception as exc:\n            return {"backend":"frontier","available":False,"reason":str(exc)[:300]}\n\n    def _owned_health(self) -> dict[str, Any]:
         try:
             from .owned_model import owned_health
             return owned_health()
@@ -254,7 +264,7 @@ class DecisionEngine:
 
     def _provider_order(self) -> list[str]:
         if self.backend == "auto":
-            order = ["owned", "laya"]
+            order = []\n            if os.getenv("FRONTIER_ENABLED", "false").strip().lower() == "true":\n                order.append("frontier")\n            order.extend(["owned", "laya"])
             if os.getenv("JEV_API_KEY", "").strip():
                 order.append("jev")
             order.append("deterministic")
@@ -309,7 +319,7 @@ def decision_health() -> dict[str, Any]:
     return {
         "backend": _ENGINE.backend,
         "fallbackEnabled": _ENGINE.fallback_enabled,
-        "owned": _ENGINE._owned_health(),
+        "frontier": _ENGINE._frontier_health(),\n        "owned": _ENGINE._owned_health(),
         "layaInstalled": __import__("importlib.util").util.find_spec("laya") is not None,
         "jevConfigured": bool(os.getenv("JEV_API_KEY", "").strip()),
         "questions": list(INBOX_DECISION_QUESTIONS.keys()),
