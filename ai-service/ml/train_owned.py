@@ -12,7 +12,7 @@ from torch import nn
 
 from app.decision_engine import INBOX_DECISION_QUESTIONS
 from app.owned_model import ClinevoOne, LoRALinear, _question_text, text_to_ids
-from ml.synthetic_dataset import Example, build_dataset
+from ml.synthetic_dataset import Example, build_dataset, split_dataset
 
 def _loss(model, example: Example, name: str, question: dict) -> torch.Tensor:
     qtype = question['type']
@@ -30,6 +30,9 @@ def _loss(model, example: Example, name: str, question: dict) -> torch.Tensor:
 def train(args):
     random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
     dataset = build_dataset(args.size, args.seed)
+    train_set, validation_set, test_set = split_dataset(dataset, seed=args.seed)
+    if not train_set:
+        raise ValueError('subject-level training split is empty; increase dataset size')
     model = ClinevoOne()
     if args.init:
         payload = torch.load(args.init, map_location='cpu', weights_only=False)
@@ -41,16 +44,25 @@ def train(args):
     optimizer = torch.optim.AdamW(trainable, lr=args.lr, weight_decay=0.01)
     questions = INBOX_DECISION_QUESTIONS
     for epoch in range(args.epochs):
-        random.shuffle(dataset); losses=[]
-        for example in dataset:
+        random.shuffle(train_set); losses=[]
+        for example in train_set:
             optimizer.zero_grad(set_to_none=True)
             loss = torch.stack([_loss(model, example, name, q) for name, q in questions.items()]).mean()
             loss.backward(); torch.nn.utils.clip_grad_norm_(trainable, 1.0); optimizer.step()
             losses.append(float(loss.detach()))
-        print(f'epoch={epoch+1} loss={sum(losses)/len(losses):.6f}')
+        with torch.inference_mode():
+            val_correct = 0
+            route = INBOX_DECISION_QUESTIONS['route']
+            choices = list(route['criteria'])
+            for example in validation_set:
+                output = model(text_to_ids(example.text), text_to_ids(_question_text('route', route)), 'choice', choice_count=len(choices), audio_waveform=torch.tensor(example.audio), accel=torch.tensor(example.accel))
+                val_correct += int(choices[int(output['choice_logits'].argmax())] == example.labels['route'])
+        val_acc = val_correct / max(len(validation_set), 1)
+        print(f'epoch={epoch+1} loss={sum(losses)/len(losses):.6f} val_route_accuracy={val_acc:.4f}')
     version = f'clinevoone-{hashlib.sha256(f"{args.seed}-{args.size}".encode()).hexdigest()[:10]}'
     output = Path(args.output); output.parent.mkdir(parents=True, exist_ok=True)
-    torch.save({'model_version':version,'architecture':'ClinevoOne-v1','dataset_version':f'synthetic-v1-{args.size}-{args.seed}','model':model.state_dict(),'training':vars(args)}, output)
+    torch.save({'model_version':version,'architecture':'ClinevoOne-v1','dataset_version':f'synthetic-v1-{args.size}-{args.seed}-subject-split',
+        'split': {'train_subjects': len({item.subject_id for item in train_set}), 'validation_subjects': len({item.subject_id for item in validation_set}), 'test_subjects': len({item.subject_id for item in test_set})},'model':model.state_dict(),'training':vars(args)}, output)
     print(json.dumps({'checkpoint':str(output),'model_version':version,'parameters':sum(p.numel() for p in model.parameters())}, indent=2))
 
 if __name__ == '__main__':
