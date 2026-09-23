@@ -34,7 +34,7 @@ jobs:
         run: python -m ml.train_owned --size 64 --epochs 1 --tasks route --output /tmp/cli.pt
       - name: Export Hugging Face package
         working-directory: ai-service
-        run: python -m ml.export_frontier --checkpoint /tmp/cli.pt --output /tmp/hf --repo-id ${{ inputs.model_repo }}
+        run: python -m ml.export_cli --checkpoint /tmp/cli.pt --output /tmp/hf --repo-id ${{ inputs.model_repo }}
       - name: Publish model
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
