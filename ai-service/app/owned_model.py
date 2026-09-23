@@ -129,6 +129,8 @@ class ClinevoOne(nn.Module):
 
     def encode_state(self, text_ids: Tensor, audio_waveform: Tensor | None = None, accel: Tensor | None = None) -> Tensor:
         text_vec = self.text(text_ids)
+        if text_vec.dim() == 2 and text_vec.shape[0] == 1:
+            text_vec = text_vec.squeeze(0)
         audio_vec = self.audio(audio_waveform) if audio_waveform is not None else torch.zeros_like(text_vec)
         accel_vec = self.accel(accel) if accel is not None else torch.zeros_like(text_vec)
         mask = torch.tensor([1.0, float(audio_waveform is not None and audio_waveform.numel() > 0), float(accel is not None and accel.numel() > 0)], device=text_vec.device)
