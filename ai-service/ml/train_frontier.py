@@ -97,7 +97,10 @@ def train(args) -> None:
         q_emb = model.text_backbone(q_batch["input_ids"].to(device), q_batch["attention_mask"].to(device))
         with torch.no_grad():
             option_emb = model.text_backbone(option_ids, option_mask).unsqueeze(0)
-        output = model.decide_from_state(state, q_emb, "choice", option_emb)
+        if args.task == "agent_action":
+            output = {"choice_logits": model.action_head(model._pair(state, q_emb))}
+        else:
+            output = model.decide_from_state(state, q_emb, "choice", option_emb)
         target = torch.tensor([options.index(item.labels[args.task])], device=device)
         loss = torch.nn.functional.cross_entropy(output["choice_logits"], target)
         loss.backward()
@@ -134,7 +137,7 @@ if __name__ == "__main__":
     parser.add_argument("--steps", type=int, default=500)
     parser.add_argument("--lr", type=float, default=2e-5)
     parser.add_argument("--seed", type=int, default=17)
-    parser.add_argument("--task", choices=("route",), default="route")
+    parser.add_argument("--task", choices=("route", "agent_action"), default="route")
     parser.add_argument("--max-tokens", type=int, default=1024)
     parser.add_argument("--device", default="auto")
     parser.add_argument("--unfreeze-last-n", type=int, default=0)
