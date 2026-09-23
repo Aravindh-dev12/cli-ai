@@ -125,6 +125,81 @@ python samples/scripts/send_samples.py \
 
 For a fully isolated automated path, `make smoke` starts the Compose stack with GreenMail and executes a synthetic SMTP → IMAP → Oracle → ClamAV → AI → reviewer-accept flow.
 
+
+## Autonomous agent core
+
+Clinevo now includes a **bounded, supervised agent control plane**. The agent is deliberately not an unrestricted LLM with database access. It observes durable inbox work, advances an explicit state machine, evaluates evidence and policy, and routes every AI-derived case to human review under the default policy.
+
+```
+Inbox
+  ↓
+Observe → durable AGENT_JOB
+  ↓
+Analyze → inspect message/job state
+  ↓
+Evidence + policy evaluation
+  ↓
+WAITING_REVIEW
+  ↓
+Human reviewer
+  ↓
+existing Clinevo review workflow
+  ↓
+FINALIZED
+```
+
+### Agent lifecycle
+
+| State | Meaning |
+| --- | --- |
+| `OBSERVED` | A durable agent job exists for the inbox message |
+| `ANALYZING` | The agent is evaluating processing state, classifications and evidence |
+| `WAITING_REVIEW` | The supervised policy requires a human reviewer |
+| `FINALIZED` | Reserved for a future controlled finalization transition |
+| `FAILED` | The agent could not safely advance the job and recorded the failure |
+
+The agent stores its own runtime state, job state and event history in Oracle. It is therefore restart-safe at the orchestration layer: the agent can reconstruct what it observed instead of relying on in-memory state.
+
+### Operator surface
+
+The repository now includes a small operator CLI:
+
+```bash
+python tools/clinevo.py status
+python tools/clinevo.py jobs
+python tools/clinevo.py events 123
+python tools/clinevo.py pause
+python tools/clinevo.py resume
+python tools/clinevo.py reconcile
+python tools/clinevo.py advance 42
+```
+
+The same control plane is available over REST:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/api/agent/status` | runtime and queue state |
+| GET | `/api/agent/jobs` | recent agent jobs |
+| GET | `/api/agent/messages/{id}/events` | message-level agent history |
+| POST | `/api/agent/pause` | stop autonomous advancement |
+| POST | `/api/agent/resume` | resume advancement |
+| POST | `/api/agent/reconcile` | reconcile agent jobs with inbox reality |
+| POST | `/api/agent/jobs/{id}/advance` | explicitly advance one job |
+
+### Safety invariant
+
+The default policy is intentionally conservative:
+
+- AI output is a **proposal**, not an authoritative regulatory fact.
+- Human review is mandatory.
+- Evidence-bearing facts are counted separately from absence sentinels.
+- The agent never directly edits a classification or reviewer decision.
+- Every agent state transition creates an `AGENT_EVENT`.
+- Reconciliation can mark agent jobs whose source message disappeared as failed rather than silently dropping them.
+- `pause` is a control-plane stop; it does not delete queued work.
+
+This is the foundation for the larger Clinevo agent architecture: provider-neutral inbox adapters, document runtimes, AI runtimes, provenance validation, policy evaluation, reviewer workflows, MCP tooling and a future terminal dashboard can all attach to the same durable control plane.
+
 ## AI modes
 
 ### Deterministic/offline mode — default
