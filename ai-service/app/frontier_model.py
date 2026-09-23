@@ -57,10 +57,11 @@ class ClinevoOneFrontier(nn.Module):
     def encode_batch(self, input_ids: Tensor, attention_mask: Tensor, audio_waveform: Tensor | None, accel: Tensor | None) -> Tensor:
         text_vec = self.text_backbone(input_ids, attention_mask)
         device = text_vec.device
+        batch_size = text_vec.shape[0]
         audio_vec = self.audio(audio_waveform).to(device) if audio_waveform is not None else torch.zeros(256, device=device)
         accel_vec = self.accel(accel).to(device) if accel is not None else torch.zeros(256, device=device)
-        audio_vec = self.audio_proj(audio_vec.float())
-        accel_vec = self.accel_proj(accel_vec.float())
+        audio_vec = self.audio_proj(audio_vec.float()).unsqueeze(0).expand(batch_size, -1)
+        accel_vec = self.accel_proj(accel_vec.float()).unsqueeze(0).expand(batch_size, -1)
         mask = torch.tensor(
             [
                 1.0,
