@@ -3,8 +3,9 @@ import time
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 
+from .decision_engine import decision_health, evaluate_custom, evaluate_inbox
 from .literature import screen_literature_pdf
-from .models import LiteratureBatchResult, ProcessingResult, TextProcessingRequest, TextProcessingResult
+from .models import DecisionRequest, DecisionTrace, LiteratureBatchResult, ProcessingResult, TextProcessingRequest, TextProcessingResult
 from .pdf_processor import process_pdf
 from .text_processor import process_text
 
@@ -32,6 +33,16 @@ async def _read_pdf(file: UploadFile) -> bytes:
     if not data.startswith(b"%PDF-"):
         raise HTTPException(status_code=415, detail=f"File does not contain a valid PDF signature: {file.filename or 'unnamed'}")
     return data
+
+
+@app.get("/decision/health")
+def decision_provider_health() -> dict:
+    return decision_health()
+
+
+@app.post("/decision", response_model=DecisionTrace)
+def decide(request: DecisionRequest) -> DecisionTrace:
+    return evaluate_inbox(request.state) if request.questions is None else evaluate_custom(request.state, request.questions)
 
 
 @app.get("/health")
