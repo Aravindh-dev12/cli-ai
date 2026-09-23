@@ -124,7 +124,7 @@ class ClinevoOne(nn.Module):
         self.state_proj = LoRALinear(HIDDEN * 2, HIDDEN, rank=16, alpha=32)
         self.question = TextEncoder()
         self.noul_head = LoRALinear(HIDDEN * 2, 1, rank=8, alpha=16)
-        self.score_head = LoRALinear(HIDDEN * 2, 3, rank=8, alpha=16)
+        self.score_head = LoRALinear(HIDDEN * 2, 4, rank=8, alpha=16)
         self.choice_head = LoRALinear(HIDDEN * 2, 32, rank=8, alpha=16)
 
     def encode_state(self, text_ids: Tensor, audio_waveform: Tensor | None = None, accel: Tensor | None = None) -> Tensor:
