@@ -26,6 +26,6 @@ def main():
             out=model(text_to_ids(item.text),text_to_ids(_question_text('route',question)),'choice',choice_count=len(choices),audio_waveform=torch.tensor(item.audio),accel=torch.tensor(item.accel))
         pred=choices[int(torch.softmax(out['choice_logits'],dim=-1).argmax())]; correct += int(pred==item.labels['route']); lat.append((time.perf_counter()-t)*1000)
     metrics={'route_accuracy':correct/len(data),'p95_latency_ms':float(np.percentile(lat,95)),'mean_latency_ms':float(np.mean(lat)),'parameter_count':float(sum(p.numel() for p in model.parameters()))}
-    print(json.dumps({'model_version':payload.get('model_version'),'metrics':metrics},indent=2))
+    result={'model_version':payload.get('model_version'),'metrics':metrics}; Path(args.out).parent.mkdir(parents=True,exist_ok=True); Path(args.out).write_text(json.dumps(result,indent=2),encoding='utf-8'); print(json.dumps(result,indent=2))
 
 if __name__=='__main__': main()
