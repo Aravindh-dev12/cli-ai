@@ -84,7 +84,23 @@ INBOX_DECISION_QUESTIONS: dict[str, dict[str, Any]] = {
 }
 
 
-class FrontierProvider:\n    name = "frontier"\n    def __init__(self): self._provider = None\n    def _get(self):\n        if self._provider is None:\n            from .frontier_model import FrontierModelProvider\n            self._provider = FrontierModelProvider()\n        return self._provider\n    def predict(self, state: Any, questions: dict[str, Any]):\n        return self._get().predict(state, questions)\n\n\nclass OwnedProvider:
+class FrontierProvider:
+    name = "frontier"
+
+    def __init__(self):
+        self._provider = None
+
+    def _get(self):
+        if self._provider is None:
+            from .frontier_model import FrontierModelProvider
+            self._provider = FrontierModelProvider()
+        return self._provider
+
+    def predict(self, state: Any, questions: dict[str, Any]):
+        return self._get().predict(state, questions)
+
+
+class OwnedProvider:
     name = 'owned'
     def __init__(self): self._provider = None
     def _get(self):
@@ -209,7 +225,8 @@ class DecisionEngine:
         self.backend = os.getenv("DECISION_BACKEND", "deterministic").strip().lower()
         self.fallback_enabled = os.getenv("DECISION_FALLBACK", "true").strip().lower() == "true"
         self._providers: dict[str, DecisionProvider] = {
-            "frontier": FrontierProvider(),\n            "owned": OwnedProvider(),
+            "frontier": FrontierProvider(),
+            "owned": OwnedProvider(),
             "laya": LayaProvider(),
             "jev": JevProvider(),
             "deterministic": _DeterministicProvider(),
