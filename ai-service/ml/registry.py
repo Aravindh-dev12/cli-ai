@@ -17,17 +17,27 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def _normalize_metrics(metrics: dict) -> dict:
+    if not isinstance(metrics, dict):
+        raise TypeError("metrics payload must be a JSON object")
+    nested = metrics.get("metrics")
+    if isinstance(nested, dict):
+        return nested
+    return metrics
+
+
 def register(checkpoint: str, metrics: dict, dataset_version: str, model_version: str) -> Path:
     path = Path(checkpoint)
     if not path.exists():
         raise FileNotFoundError(f"checkpoint not found: {path}")
+    normalized = _normalize_metrics(metrics)
     ROOT.mkdir(parents=True, exist_ok=True)
     manifest = {
         "model_version": model_version,
         "artifact": path.name,
         "sha256": sha256_file(path),
         "dataset_version": dataset_version,
-        "metrics": metrics,
+        "metrics": normalized,
         "git_commit": os.getenv("GIT_COMMIT"),
         "registered_at_utc": datetime.now(timezone.utc).isoformat(),
     }
