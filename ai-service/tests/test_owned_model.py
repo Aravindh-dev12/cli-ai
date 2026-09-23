@@ -93,3 +93,13 @@ def test_multimodal_state_changes_when_audio_or_accelerometer_is_present():
         imu = model.encode_state(state, accel=torch.ones(24, 3))
     assert not torch.allclose(text_only, audio)
     assert not torch.allclose(text_only, imu)
+
+
+def test_pair_normalizes_single_sample_question_shape():
+    model = ClinevoOne().eval()
+    state = text_to_ids("shape regression")
+    question = text_to_ids(_question_text("route", INBOX_DECISION_QUESTIONS["route"]))
+    with torch.inference_mode():
+        encoded = model.encode_state(state)
+        pair = model._pair(encoded, question)
+    assert pair.shape == (512,)
