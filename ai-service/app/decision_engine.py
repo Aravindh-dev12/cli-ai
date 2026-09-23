@@ -153,6 +153,12 @@ def _deterministic_answers(text: str) -> tuple[str, dict[str, Any], dict[str, An
             "probabilities": {},
         },
         "requires_human_review": {"type": "noul", "noul": 1.0},
+        "agent_action": {
+            "type": "choice",
+            "choice": "escalate" if route == "safety" else ("enrich" if route == "medical_information" else ("review" if route == "quality" else "hold")),
+            "confidence": 0.75,
+            "probabilities": {"escalate": 1.0} if route == "safety" else ({"enrich": 1.0} if route == "medical_information" else ({"review": 1.0} if route == "quality" else {"hold": 1.0})),
+        },
         "route": {
             "type": "choice",
             "choice": route,
