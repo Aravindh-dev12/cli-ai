@@ -46,7 +46,10 @@ owned-train:
 	docker compose run --rm ai-service python -m ml.train_owned --size $${OWNED_TRAIN_SIZE:-128} --epochs $${OWNED_TRAIN_EPOCHS:-2}
 
 owned-evaluate:
-	docker compose run --rm ai-service python -m ml.evaluate_owned --checkpoint /cache/clinevo-owned/latest.pt --size $${OWNED_EVAL_SIZE:-256}
+	docker compose run --rm ai-service python -m ml.evaluate_owned --checkpoint /cache/clinevo-owned/latest.pt --size ${OWNED_EVAL_SIZE:-256}
+
+signal-gan:
+	docker compose run --rm ai-service python -m ml.signal_gan --epochs ${GAN_EPOCHS:-10} --batch-size ${GAN_BATCH_SIZE:-32}
 
 owned-benchmark:
 	docker compose run --rm ai-service python -m ml.benchmark --checkpoint /cache/clinevo-owned/latest.pt --size $${OWNED_BENCHMARK_SIZE:-256}
