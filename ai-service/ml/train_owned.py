@@ -42,7 +42,10 @@ def train(args):
             if isinstance(module, LoRALinear): module.freeze_base()
     trainable = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.AdamW(trainable, lr=args.lr, weight_decay=0.01)
-    questions = INBOX_DECISION_QUESTIONS
+    requested = [name.strip() for name in args.tasks.split(',') if name.strip()]
+    unknown = [name for name in requested if name not in INBOX_DECISION_QUESTIONS]
+    if unknown: raise ValueError(f'unknown tasks: {unknown}')
+    questions = {name: INBOX_DECISION_QUESTIONS[name] for name in (requested or INBOX_DECISION_QUESTIONS)}
     for epoch in range(args.epochs):
         random.shuffle(train_set); losses=[]
         for example in train_set:
@@ -74,4 +77,5 @@ if __name__ == '__main__':
     parser.add_argument('--output',default='/cache/clinevo-owned/latest.pt')
     parser.add_argument('--init',default='')
     parser.add_argument('--lora',action='store_true')
+    parser.add_argument('--tasks',default='')
     train(parser.parse_args())
