@@ -167,14 +167,18 @@ def _question_text(name: str, question: dict[str, Any]) -> str:
 
 def _audio_tensor(state: Any) -> Tensor | None:
     if not isinstance(state, dict): return None
-    if state.get('audio') is not None: return torch.tensor(state['audio'], dtype=torch.float32)
+    if state.get('audio') is not None:
+        from ml.signal_schema import validate_audio
+        return torch.tensor(validate_audio(state['audio']), dtype=torch.float32)
     encoded = state.get('audio_base64')
     if encoded:
         return torch.from_numpy(np.frombuffer(base64.b64decode(encoded), dtype=np.float32).copy())
     return None
 
 def _accel_tensor(state: Any) -> Tensor | None:
-    return None if not isinstance(state, dict) or state.get('accelerometer') is None else torch.tensor(state['accelerometer'], dtype=torch.float32)
+    if not isinstance(state, dict) or state.get('accelerometer') is None: return None
+    from ml.signal_schema import validate_accelerometer
+    return torch.tensor(validate_accelerometer(state['accelerometer']), dtype=torch.float32)
 
 class OwnedModelProvider:
     name = 'owned'
