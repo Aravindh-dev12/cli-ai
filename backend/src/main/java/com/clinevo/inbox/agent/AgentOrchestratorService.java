@@ -1,5 +1,6 @@
 package com.clinevo.inbox.agent;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@ConditionalOnProperty(name = "clinevo.agent.enabled", havingValue = "true", matchIfMissing = true)
 public class AgentOrchestratorService {
     private final JdbcTemplate jdbc;
     private final AgentPolicyEngine policyEngine;
