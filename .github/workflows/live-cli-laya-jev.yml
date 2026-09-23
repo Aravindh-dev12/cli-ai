@@ -2,8 +2,6 @@ name: Live CLI vs Laya vs Jev
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
 
 permissions:
   contents: read
