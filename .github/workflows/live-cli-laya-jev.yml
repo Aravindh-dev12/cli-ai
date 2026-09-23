@@ -1,0 +1,42 @@
+name: Live CLI vs Laya vs Jev
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  live-compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+      JEV_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+      LAYA_LOAD_MODE: lazy
+      DECISION_BACKEND: laya
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install local decision stack
+        working-directory: ai-service
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-local.txt pytest
+      - name: Train a small reproducible CLI checkpoint
+        working-directory: ai-service
+        run: |
+          python -m ml.train_owned --size 48 --epochs 1 --output /tmp/cli-checkpoint.pt
+      - name: Run live comparison
+        working-directory: ai-service
+        run: |
+          python -m ml.live_compare --checkpoint /tmp/cli-checkpoint.pt --size 48 --out /tmp/live-compare.json
+      - name: Upload comparison artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-laya-jev-live-comparison
+          path: /tmp/live-compare.json
