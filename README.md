@@ -1,4 +1,4 @@
-# Clinevo Smart Inbox Assistant
+# CLI Smart Inbox Agent
 
 Production-oriented candidate implementation of the **Clinevo Technologies Smart Inbox Assistant** assignment.
 
@@ -203,7 +203,7 @@ make local-up
 
 The local launcher starts Oracle, ClamAV, the AI service, Spring Boot, and Angular, waits for service health, and warms the configured decision provider. See `docs/LOCAL_RUNTIME.md` for Laya/Jev switching and `docs/AGENT_CORE.md` for the durable agent lifecycle.
 
-## ClinevoOne in-house model track
+## CLI in-house model track
 
 Clinevo now contains an owned-model research path instead of relying entirely on external decision models.
 
