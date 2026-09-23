@@ -74,6 +74,18 @@ INBOX_DECISION_QUESTIONS: dict[str, dict[str, Any]] = {
 }
 
 
+class OwnedProvider:
+    name = 'owned'
+    def __init__(self): self._provider = None
+    def _get(self):
+        if self._provider is None:
+            from .owned_model import OwnedModelProvider
+            self._provider = OwnedModelProvider()
+        return self._provider
+    def predict(self, state: Any, questions: dict[str, Any]):
+        return self._get().predict(state, questions)
+
+
 class DecisionProvider(Protocol):
     name: str
 
@@ -187,6 +199,7 @@ class DecisionEngine:
         self.backend = os.getenv("DECISION_BACKEND", "deterministic").strip().lower()
         self.fallback_enabled = os.getenv("DECISION_FALLBACK", "true").strip().lower() == "true"
         self._providers: dict[str, DecisionProvider] = {
+            "owned": OwnedProvider(),
             "laya": LayaProvider(),
             "jev": JevProvider(),
             "deterministic": _DeterministicProvider(),
@@ -230,9 +243,18 @@ class DecisionEngine:
 
         raise RuntimeError("No decision provider succeeded: " + "; ".join(failures))
 
+    def _owned_health(self) -> dict[str, Any]:
+        try:
+            from .owned_model import owned_health
+            return owned_health()
+        except ImportError:
+            return {'backend':'owned','available':False,'reason':'local model dependencies are not installed'}
+        except Exception as exc:
+            return {'backend':'owned','available':False,'reason':str(exc)[:300]}
+
     def _provider_order(self) -> list[str]:
         if self.backend == "auto":
-            order = ["laya"]
+            order = ["owned", "laya"]
             if os.getenv("JEV_API_KEY", "").strip():
                 order.append("jev")
             order.append("deterministic")
@@ -241,6 +263,9 @@ class DecisionEngine:
             raise RuntimeError(f"Unsupported DECISION_BACKEND: {self.backend}")
         order = [self.backend]
         if self.backend != "deterministic" and self.fallback_enabled:
+            if self.backend == "owned":
+                order.extend(["laya"])
+                if os.getenv("JEV_API_KEY", "").strip(): order.append("jev")
             order.append("deterministic")
         return order
 
@@ -284,6 +309,7 @@ def decision_health() -> dict[str, Any]:
     return {
         "backend": _ENGINE.backend,
         "fallbackEnabled": _ENGINE.fallback_enabled,
+        "owned": _ENGINE._owned_health(),
         "layaInstalled": __import__("importlib.util").util.find_spec("laya") is not None,
         "jevConfigured": bool(os.getenv("JEV_API_KEY", "").strip()),
         "questions": list(INBOX_DECISION_QUESTIONS.keys()),

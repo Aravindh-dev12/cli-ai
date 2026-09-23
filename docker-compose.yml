@@ -34,11 +34,13 @@ services:
       LLM_MODEL: ${LLM_MODEL:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-45}
-      DECISION_BACKEND: ${DECISION_BACKEND:-laya}
+      DECISION_BACKEND: ${DECISION_BACKEND:-auto}
       DECISION_FALLBACK: ${DECISION_FALLBACK:-true}
       LAYA_LOAD_MODE: ${LAYA_LOAD_MODE:-lazy}
       LAYA_MAX_LOADED: ${LAYA_MAX_LOADED:-2}
       LAYA_MODEL: ${LAYA_MODEL:-}
+      OWNED_MODEL_CHECKPOINT: ${OWNED_MODEL_CHECKPOINT:-/cache/clinevo-owned/latest.pt}
+      MODEL_REGISTRY_ROOT: ${MODEL_REGISTRY_ROOT:-/cache/clinevo-owned/registry}
       JEV_API_URL: ${JEV_API_URL:-https://api.typesafe.ai/v1/systemone}
       JEV_MODEL: ${JEV_MODEL:-jev-latest}
       JEV_API_KEY: ${JEV_API_KEY:-}
