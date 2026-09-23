@@ -58,10 +58,10 @@ def build_dataset(size: int = 256, seed: int = 7) -> list[Example]:
     rng = np.random.default_rng(seed)
     routes = list(TEXT_BY_ROUTE)
     labels = {
-        'safety': {'icsr':1.0,'pqc':0.0,'mi':0.0,'not_relevant':0.0,'urgency':3.0,'requires_human_review':1.0,'route':'safety'},
-        'quality': {'icsr':0.0,'pqc':1.0,'mi':0.0,'not_relevant':0.0,'urgency':2.0,'requires_human_review':1.0,'route':'quality'},
-        'medical_information': {'icsr':0.0,'pqc':0.0,'mi':1.0,'not_relevant':0.0,'urgency':1.0,'requires_human_review':1.0,'route':'medical_information'},
-        'general': {'icsr':0.0,'pqc':0.0,'mi':0.0,'not_relevant':1.0,'urgency':0.0,'requires_human_review':1.0,'route':'general'},
+        'safety': {'icsr':1.0,'pqc':0.0,'mi':0.0,'not_relevant':0.0,'urgency':3.0,'requires_human_review':1.0,'route':'safety','agent_action':'escalate'},
+        'quality': {'icsr':0.0,'pqc':1.0,'mi':0.0,'not_relevant':0.0,'urgency':2.0,'requires_human_review':1.0,'route':'quality','agent_action':'review'},
+        'medical_information': {'icsr':0.0,'pqc':0.0,'mi':1.0,'not_relevant':0.0,'urgency':1.0,'requires_human_review':1.0,'route':'medical_information','agent_action':'enrich'},
+        'general': {'icsr':0.0,'pqc':0.0,'mi':0.0,'not_relevant':1.0,'urgency':0.0,'requires_human_review':1.0,'route':'general','agent_action':'hold'},
     }
     result = []
     for i in range(size):
