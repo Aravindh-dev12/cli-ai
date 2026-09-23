@@ -143,15 +143,15 @@ class ClinevoOne(nn.Module):
     def predict_many(
         self,
         text_ids: Tensor,
-        questions: list[tuple[str, str, int]],
+        questions: list[tuple[str, Tensor, str, int]],
         audio_waveform: Tensor | None = None,
         accel: Tensor | None = None,
     ) -> list[tuple[str, dict[str, Tensor]]]:
         """Evaluate all typed questions for one state with one shared state encode."""
         state = self.encode_state(text_ids, audio_waveform, accel)
         outputs: list[tuple[str, dict[str, Tensor]]] = []
-        for name, question_type, choice_count in questions:
-            pair = self._pair(state, text_to_ids(name))
+        for name, question_ids, question_type, choice_count in questions:
+            pair = self._pair(state, question_ids)
             if question_type == 'noul':
                 outputs.append((name, {'noul_logit': self.noul_head(pair).squeeze(-1)}))
             elif question_type == 'score':
@@ -208,30 +208,61 @@ def _accel_tensor(state: Any) -> Tensor | None:
 
 class OwnedModelProvider:
     name = 'owned'
-    def __init__(self): self._model, self._version = None, 'unloaded'
-    def _checkpoint(self) -> Path: return Path(os.getenv('OWNED_MODEL_CHECKPOINT', '/cache/clinevo-owned/latest.pt'))
+    def __init__(self):
+        self._model, self._version = None, 'unloaded'
+        self._temperatures: dict[str, float] = {}
+
+    def _checkpoint(self) -> Path:
+        return Path(os.getenv('OWNED_MODEL_CHECKPOINT', '/cache/clinevo-owned/latest.pt'))
+
+    def _calibration(self) -> Path:
+        return Path(os.getenv('OWNED_MODEL_CALIBRATION', str(self._checkpoint().with_name('calibration.json'))))
     def _load(self) -> ClinevoOne:
         if self._model is not None: return self._model
         path = self._checkpoint()
         if not path.exists(): raise RuntimeError(f'owned model checkpoint not found: {path}; run make owned-train')
         payload = torch.load(path, map_location='cpu', weights_only=False)
         model = ClinevoOne(); model.load_state_dict(payload['model'], strict=True); model.eval()
-        self._version = str(payload.get('model_version', path.stem)); self._model = model
+        self._version = str(payload.get('model_version', path.stem))
+        calibration = self._calibration()
+        if calibration.exists():
+            try:
+                raw = json.loads(calibration.read_text(encoding='utf-8'))
+                self._temperatures = {
+                    str(name): float(value)
+                    for name, value in raw.get('temperatures', {}).items()
+                    if float(value) > 0
+                }
+            except (OSError, ValueError, TypeError, json.JSONDecodeError):
+                self._temperatures = {}
+        self._model = model
         return model
+
     def predict(self, state: Any, questions: dict[str, Any]):
-        model = self._load(); text_ids = text_to_ids(_state_text(state)); audio = _audio_tensor(state); accel = _accel_tensor(state); answers = {}
+        model = self._load()
+        text_ids = text_to_ids(_state_text(state))
+        audio = _audio_tensor(state)
+        accel = _accel_tensor(state)
+        specs = [
+            (name, text_to_ids(_question_text(name, question)), str(question.get('type', 'noul')),
+             len(question.get('criteria', {})) if isinstance(question.get('criteria'), dict) else 0)
+            for name, question in questions.items()
+        ]
+        answers = {}
         with torch.inference_mode():
-            for name, question in questions.items():
-                qtype = str(question.get('type', 'noul')); qids = text_to_ids(_question_text(name, question))
-                output = model(text_ids, qids, qtype, choice_count=len(question.get('criteria', {})) if isinstance(question.get('criteria'), dict) else 0, audio_waveform=audio, accel=accel)
+            outputs = model.predict_many(text_ids, specs, audio_waveform=audio, accel=accel)
+            for name, output in outputs:
+                question = questions[name]
+                qtype = str(question.get('type', 'noul'))
+                temperature = max(0.05, self._temperatures.get(name, 1.0))
                 if qtype == 'noul':
-                    p = float(torch.sigmoid(output['noul_logit']).item()); answers[name] = {'type':'noul','noul':p,'confidence':abs(p-0.5)*2}
+                    p = float(torch.sigmoid(output['noul_logit'] / temperature).item()); answers[name] = {'type':'noul','noul':p,'confidence':abs(p-0.5)*2}
                 elif qtype == 'score':
-                    probs = torch.softmax(output['score_logits'], dim=-1); score = float((probs * torch.arange(4)).sum().item())
+                    probs = torch.softmax(output['score_logits'] / temperature, dim=-1); score = float((probs * torch.arange(4)).sum().item())
                     answers[name] = {'type':'score','score':score,'confidence':float(probs.max().item()),'probabilities':{str(i):float(v) for i,v in enumerate(probs.tolist())}}
                 else:
                     choices = list(question.get('criteria', {}).keys()) or [f'choice_{i}' for i in range(output['choice_logits'].numel())]
-                    probs = torch.softmax(output['choice_logits'], dim=-1); idx = min(int(probs.argmax().item()), len(choices)-1)
+                    probs = torch.softmax(output['choice_logits'] / temperature, dim=-1); idx = min(int(probs.argmax().item()), len(choices)-1)
                     answers[name] = {'type':'choice','choice':choices[idx],'confidence':float(probs[idx].item()),'probabilities':{choices[i]:float(probs[i].item()) for i in range(min(len(choices), probs.numel()))}}
         return self._version, answers, {'architecture':'ClinevoOne-v1','multimodal':{'text':True,'audio':audio is not None,'accelerometer':accel is not None},'parameters':sum(p.numel() for p in model.parameters()),'low_rank_adaptation':True}
 
