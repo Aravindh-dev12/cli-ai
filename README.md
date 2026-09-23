@@ -203,7 +203,7 @@ make local-up
 
 The local launcher starts Oracle, ClamAV, the AI service, Spring Boot, and Angular, waits for service health, and warms the configured decision provider. See `docs/LOCAL_RUNTIME.md` for Laya/Jev switching and `docs/AGENT_CORE.md` for the durable agent lifecycle.
 
-## Tests and CI
+## ClinevoOne in-house model track,,Clinevo now contains an owned-model research path instead of relying entirely on external decision models.,,```,Text -> multi-scale CNN -> BiGRU ---\,Audio -> STFT -> CNN ---------------> gated multimodal state -> typed heads,IMU -> 1D CNN -> BiGRU ------------/,Question -> shared encoder --------/,```,,The model supports NOUL, SCORE, and CHOICE decisions, direct low-rank adapters, local audio DSP features, accelerometer sequences, synthetic signal augmentation with a GAN, and a model registry/promotion workflow.,,Local commands:,```bash,make owned-train,make owned-evaluate,make owned-benchmark,make owned-calibrate,make signal-gan,```,,`DECISION_BACKEND=auto` tries the owned checkpoint first, then Laya, optional Jev, and deterministic fallback. A missing or unvalidated owned checkpoint therefore does not break the local inbox application.,,See `docs/OWNED_MODEL.md` for the architecture, benchmark contract, MLOps flow, and the data requirements for replacing the synthetic training set with representative audio/accelerometer/pet-wellness data.,## Tests and CI
 
 GitHub Actions runs service-level build/tests on every pull request and then gates the full-stack smoke test on those jobs:
 
