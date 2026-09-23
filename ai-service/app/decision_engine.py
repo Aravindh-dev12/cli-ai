@@ -270,7 +270,16 @@ class DecisionEngine:
 
         raise RuntimeError("No decision provider succeeded: " + "; ".join(failures))
 
-    def _frontier_health(self) -> dict[str, Any]:\n        try:\n            from .frontier_model import frontier_health\n            return frontier_health()\n        except ImportError:\n            return {"backend":"frontier","available":False,"reason":"frontier dependencies are not installed"}\n        except Exception as exc:\n            return {"backend":"frontier","available":False,"reason":str(exc)[:300]}\n\n    def _owned_health(self) -> dict[str, Any]:
+    def _frontier_health(self) -> dict[str, Any]:
+        try:
+            from .frontier_model import frontier_health
+            return frontier_health()
+        except ImportError:
+            return {"backend":"frontier","available":False,"reason":"frontier dependencies are not installed"}
+        except Exception as exc:
+            return {"backend":"frontier","available":False,"reason":str(exc)[:300]}
+
+    def _owned_health(self) -> dict[str, Any]:
         try:
             from .owned_model import owned_health
             return owned_health()
@@ -281,7 +290,10 @@ class DecisionEngine:
 
     def _provider_order(self) -> list[str]:
         if self.backend == "auto":
-            order = []\n            if os.getenv("FRONTIER_ENABLED", "false").strip().lower() == "true":\n                order.append("frontier")\n            order.extend(["owned", "laya"])
+            order = []
+            if os.getenv("FRONTIER_ENABLED", "false").strip().lower() == "true":
+                order.append("frontier")
+            order.extend(["owned", "laya"])
             if os.getenv("JEV_API_KEY", "").strip():
                 order.append("jev")
             order.append("deterministic")
@@ -336,7 +348,8 @@ def decision_health() -> dict[str, Any]:
     return {
         "backend": _ENGINE.backend,
         "fallbackEnabled": _ENGINE.fallback_enabled,
-        "frontier": _ENGINE._frontier_health(),\n        "owned": _ENGINE._owned_health(),
+        "frontier": _ENGINE._frontier_health(),
+        "owned": _ENGINE._owned_health(),
         "layaInstalled": __import__("importlib.util").util.find_spec("laya") is not None,
         "jevConfigured": bool(os.getenv("JEV_API_KEY", "").strip()),
         "questions": list(INBOX_DECISION_QUESTIONS.keys()),
