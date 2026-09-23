@@ -79,7 +79,7 @@ frontier-export:
 	docker compose run --rm ai-service python -m ml.export_frontier --checkpoint /cache/clinevo-owned/frontier.pt --output /cache/clinevo-owned/hub
 
 hf-upload:
-	docker compose run --rm ai-service python -m ml.hf_upload --repo-id ${HF_REPO_ID:-Aravindhan11/clinevo-one-frontier} --folder /cache/clinevo-owned/hub
+	docker compose run --rm ai-service python -m ml.hf_upload --repo-id ${HF_REPO_ID:-Aravindhan11/cli} --folder /cache/clinevo-owned/hub
 
 owned-register:
 	docker compose run --rm ai-service python -m ml.mlops register --checkpoint /cache/clinevo-owned/latest.pt --metrics /cache/clinevo-owned/metrics.json --dataset-version $${OWNED_DATASET_VERSION:-synthetic-v1} --model-version $${OWNED_MODEL_VERSION:-latest}
