@@ -70,6 +70,7 @@ public class AiProcessingService {
         this.malwareScanner = malwareScanner;
         this.documentStore = documentStore;
         this.retentionService = retentionService;
+        this.decisionPersistence = decisionPersistence;
         this.maxAttempts = Math.max(1, maxAttempts);
         this.jobBatchSize = Math.max(1, Math.min(jobBatchSize, 20));
         this.retryBaseSeconds = Math.max(1, retryBaseSeconds);
