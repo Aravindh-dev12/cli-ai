@@ -140,6 +140,12 @@ class ClinevoOne(nn.Module):
 
     def _pair(self, state: Tensor, question_ids: Tensor) -> Tensor:
         question = self.question(question_ids)
+        if state.dim() == 2 and state.shape[0] == 1:
+            state = state.squeeze(0)
+        if question.dim() == 2 and question.shape[0] == 1:
+            question = question.squeeze(0)
+        if state.dim() != 1 or question.dim() != 1:
+            raise ValueError(f"single-state pair requires rank-1 tensors, got state={tuple(state.shape)} question={tuple(question.shape)}")
         return torch.cat([state, question], dim=-1)
 
     def predict_many(
