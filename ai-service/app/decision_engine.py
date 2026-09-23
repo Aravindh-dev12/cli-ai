@@ -8,6 +8,7 @@ import httpx
 
 from .classifier import classify
 from .models import DecisionTrace
+from .owned_model import OwnedModelProvider, owned_health
 
 
 INBOX_DECISION_QUESTIONS: dict[str, dict[str, Any]] = {
@@ -187,6 +188,7 @@ class DecisionEngine:
         self.backend = os.getenv("DECISION_BACKEND", "deterministic").strip().lower()
         self.fallback_enabled = os.getenv("DECISION_FALLBACK", "true").strip().lower() == "true"
         self._providers: dict[str, DecisionProvider] = {
+            "owned": OwnedModelProvider(),
             "laya": LayaProvider(),
             "jev": JevProvider(),
             "deterministic": _DeterministicProvider(),
@@ -232,7 +234,7 @@ class DecisionEngine:
 
     def _provider_order(self) -> list[str]:
         if self.backend == "auto":
-            order = ["laya"]
+            order = ["owned", "laya"]
             if os.getenv("JEV_API_KEY", "").strip():
                 order.append("jev")
             order.append("deterministic")
@@ -241,6 +243,9 @@ class DecisionEngine:
             raise RuntimeError(f"Unsupported DECISION_BACKEND: {self.backend}")
         order = [self.backend]
         if self.backend != "deterministic" and self.fallback_enabled:
+            if self.backend == "owned":
+                order.extend(["laya"])
+                if os.getenv("JEV_API_KEY", "").strip(): order.append("jev")
             order.append("deterministic")
         return order
 
@@ -284,6 +289,7 @@ def decision_health() -> dict[str, Any]:
     return {
         "backend": _ENGINE.backend,
         "fallbackEnabled": _ENGINE.fallback_enabled,
+        "owned": owned_health(),
         "layaInstalled": __import__("importlib.util").util.find_spec("laya") is not None,
         "jevConfigured": bool(os.getenv("JEV_API_KEY", "").strip()),
         "questions": list(INBOX_DECISION_QUESTIONS.keys()),
