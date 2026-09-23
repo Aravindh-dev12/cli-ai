@@ -15,6 +15,8 @@ spring:
       ddl-auto: none
     open-in-view: false
 clinevo:
+  agent:
+    enabled: false
   api-key: ""
   ai-service-url: http://localhost:65535
   job-poll-ms: 3600000
