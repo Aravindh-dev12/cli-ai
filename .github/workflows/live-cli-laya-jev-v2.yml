@@ -18,9 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+      TYPESAFE_API_KEY: ${{ inputs.benchmark_size && secrets.TYPESAFE_API_KEY || secrets.TYPESAFE_API_KEY }}
       JEV_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
       LAYA_LOAD_MODE: lazy
+      BENCHMARK_SIZE: ${{ inputs.benchmark_size || '64' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -38,7 +39,7 @@ jobs:
       - name: Run subject-held-out live comparison
         working-directory: ai-service
         run: |
-          python -m ml.live_compare_v2 --checkpoint /tmp/cli-v2.pt --size ${{ inputs.benchmark_size }} --seed 91023 --out /tmp/cli-laya-jev-v2.json
+          python -m ml.live_compare_v2 --checkpoint /tmp/cli-v2.pt --size "$BENCHMARK_SIZE" --seed 91023 --out /tmp/cli-laya-jev-v2.json
       - name: Upload v2 benchmark
         uses: actions/upload-artifact@v4
         with:
