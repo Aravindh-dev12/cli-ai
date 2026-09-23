@@ -1,0 +1,46 @@
+name: Publish CLI model to Hugging Face
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_repo:
+        description: Hugging Face model repository
+        required: true
+        default: Aravindhan11/cli
+      private:
+        description: Publish as private
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install CPU model toolchain
+        run: |
+          python -m pip install --upgrade pip
+          pip install 'torch==2.10.0+cpu' --index-url https://download.pytorch.org/whl/cpu
+          pip install 'numpy>=2,<3' 'pydantic==2.11.7' 'safetensors>=0.5,<1' 'huggingface_hub>=1.32,<2'
+      - name: Build reproducible CLI checkpoint
+        working-directory: ai-service
+        run: python -m ml.train_owned --size 64 --epochs 1 --tasks route --output /tmp/cli.pt
+      - name: Export Hugging Face package
+        working-directory: ai-service
+        run: python -m ml.export_frontier --checkpoint /tmp/cli.pt --output /tmp/hf --repo-id ${{ inputs.model_repo }}
+      - name: Publish model
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        working-directory: ai-service
+        run: |
+          test -n "$HF_TOKEN" || (echo 'HF_TOKEN repository secret is required' && exit 1)
+          python -m ml.hf_upload --repo-id '${{ inputs.model_repo }}' --folder /tmp/hf $( [ '${{ inputs.private }}' = 'true' ] && echo '--private' )
+      - name: Show published repository
+        run: echo "https://huggingface.co/${{ inputs.model_repo }}"
