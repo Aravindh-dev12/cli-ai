@@ -31,7 +31,7 @@ jobs:
       - name: Train a small reproducible CLI checkpoint
         working-directory: ai-service
         run: |
-          python -m ml.train_owned --size 48 --epochs 1 --output /tmp/cli-checkpoint.pt
+          python -m ml.train_owned --size 16 --epochs 1 --tasks route --output /tmp/cli-checkpoint.pt
       - name: Run live comparison
         working-directory: ai-service
         run: |
