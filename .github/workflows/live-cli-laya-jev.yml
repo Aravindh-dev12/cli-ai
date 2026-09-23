@@ -27,7 +27,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install 'torch==2.10.0+cpu' --index-url https://download.pytorch.org/whl/cpu
-          pip install 'numpy>=2.0,<3.0' 'laya>=0.3.3,<0.4.0' 'httpx>=0.28,<0.29' pytest
+          pip install 'numpy>=2.0,<3.0' 'laya>=0.3.3,<0.4.0' 'httpx>=0.28,<0.29' 'pydantic==2.11.7' pytest
       - name: Train a small reproducible CLI checkpoint
         working-directory: ai-service
         run: |
