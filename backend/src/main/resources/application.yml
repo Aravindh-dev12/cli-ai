@@ -58,6 +58,7 @@ clinevo:
   ai-connect-timeout-ms: ${AI_CONNECT_TIMEOUT_MS:5000}
   ai-read-timeout-ms: ${AI_READ_TIMEOUT_MS:120000}
   mail-poll-seconds: ${MAIL_POLL_SECONDS:60}
+  agent-poll-ms: ${AGENT_POLL_MS:2000}
   cors-origin: ${CORS_ORIGIN:http://localhost:4200}
   api-key: ${CLINEVO_API_KEY:}
   max-attachment-bytes: ${MAX_ATTACHMENT_BYTES:20971520}
