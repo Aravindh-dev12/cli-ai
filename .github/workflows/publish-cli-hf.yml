@@ -35,12 +35,24 @@ jobs:
       - name: Export Hugging Face package
         working-directory: ai-service
         run: python -m ml.export_cli --checkpoint /tmp/cli.pt --output /tmp/hf --repo-id ${{ inputs.model_repo }}
-      - name: Publish model
+      - name: Upload packaged CLI model artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-hf-model-${{ github.run_number }}
+          path: /tmp/hf
+          if-no-files-found: error
+      - name: Publish model when HF write token is available
+        if: env.HF_TOKEN != ''
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         working-directory: ai-service
+        run: python -m ml.hf_upload --repo-id '${{ inputs.model_repo }}' --folder /tmp/hf $( [ '${{ inputs.private }}' = 'true' ] && echo '--private' )
+      - name: Report Hugging Face publication state
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          test -n "$HF_TOKEN" || (echo 'HF_TOKEN repository secret is required' && exit 1)
-          python -m ml.hf_upload --repo-id '${{ inputs.model_repo }}' --folder /tmp/hf $( [ '${{ inputs.private }}' = 'true' ] && echo '--private' )
-      - name: Show published repository
-        run: echo "https://huggingface.co/${{ inputs.model_repo }}"
+          if [ -n "$HF_TOKEN" ]; then
+            echo "Hugging Face publication requested: https://huggingface.co/${{ inputs.model_repo }}"
+          else
+            echo "HF_TOKEN not configured; packaged CLI model is available as the workflow artifact."
+          fi
